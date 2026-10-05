@@ -1,0 +1,10 @@
+* @reviewers
+
+/apps/mobile/ @mobile-application-developers @reviewers
+/apps/web/ @web-developers @reviewers
+/apps/backend/ @backend-developers @reviewers
+/ai-services/ @ai-engineers @reviewers
+/packages/ @backend-developers @mobile-application-developers @web-developers @reviewers
+/infrastructure/ @reviewers @qa-testers
+/tests/ @reviewers @qa-testers
+/data/interactions-allergies/approved/ @backend-developers @reviewers

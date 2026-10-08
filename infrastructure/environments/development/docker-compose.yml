@@ -1,0 +1,48 @@
+services:
+  # DATABASE SERVICE
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    volumes:
+      - dev_db_data:/var/lib/postgresql/data
+    networks:
+      - dev_network
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # BACKEND API SERVICE
+  api:
+    build:
+      context: ../../../apps/backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      APP_ENV: ${APP_ENV}
+      PORT: 8080
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME}
+    ports:
+      - "3000:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - dev_network
+
+volumes:
+  dev_db_data:
+
+networks:
+  dev_network:
+    driver: bridge

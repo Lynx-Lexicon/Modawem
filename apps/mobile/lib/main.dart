@@ -31,7 +31,6 @@ class MainNavigationScreen extends StatefulWidget {
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int _currentIndex = 0;
 
-  // الشاشات الخمس المطلوبة في التاسك كـ Placeholders
   final List<Widget> _screens = const [
     Center(child: Text('Today - اليوم', style: TextStyle(fontSize: 20))),
     Center(child: Text('Medications - الأدوية', style: TextStyle(fontSize: 20))),
@@ -44,6 +43,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: const Color.fromARGB(255, 35, 200, 222),
         title: const Text('Modawem'),
       ),
       body: _screens[_currentIndex],

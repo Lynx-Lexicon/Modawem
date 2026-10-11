@@ -1,0 +1,13 @@
+input,case_category,expected_rxcui,expected_status,expected_acceptance
+notarealmedicine,unknown,,unresolved,false
+metoprolol tartrate or succinate,ambiguous,,unresolved,false
+metforman,similar_drug_name,,unresolved,false
+metoprolol tartrate,salt_variant,203191,resolved,true
+metoprolol succinate,salt_variant,221124,resolved,true
+amoxicillin clavulanate,combination_product,19711,resolved,true
+amoxicillin 500 mg tablet,strength_difference,308192,resolved,true
+amoxicillin 250 mg tablet,strength_difference,598025,resolved,true
+acetaminophen 0.5 mg tablet,strength_difference,,unresolved,false
+acetaminophen 500 mg tablet,similar_drug_name,198440,resolved,true
+amoxicillin / clavulanate,combination_product,19711,resolved,true
+metformin 500 mg tablet,similar_drug_name,861007,resolved,true

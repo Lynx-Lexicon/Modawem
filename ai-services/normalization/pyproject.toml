@@ -13,6 +13,11 @@ dependencies = [
     "rapidfuzz>=3.0",
 ]
 
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4",
+]
+
 [project.scripts]
 rxnorm-normalize = "rxnorm_normalize:main"
 rxnorm-server = "rxnorm_service.server:main"

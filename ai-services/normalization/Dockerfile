@@ -1,8 +1,21 @@
-FROM python:3.12-slim
+FROM python:3.12-slim AS base
 
 WORKDIR /app
 COPY pyproject.toml README.md rxnorm_normalize.py ./
 COPY rxnorm_service ./rxnorm_service
+
+# ---
+
+FROM base AS test
+
+COPY tests ./tests
+
+RUN pip install --no-cache-dir ".[dev]"
+RUN pytest -q
+
+# ---
+
+FROM base AS runtime
 
 RUN pip install --no-cache-dir .
 

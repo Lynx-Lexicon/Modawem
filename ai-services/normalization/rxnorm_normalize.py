@@ -254,9 +254,6 @@ def parse_identity(text: str) -> Identity:
     )
 
 
-def _has_identity_modifier(text: str) -> bool:
-    return parse_identity(text).has_modifier()
-
 
 def attributes_compatible(query: Identity, candidate_name: str) -> bool:
     """True when candidate attributes confirm the requested attributes."""

@@ -1,0 +1,48 @@
+name: Backend CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Compose
+        uses: docker/setup-compose-action@v1
+
+      - name: Create .env file for Development
+        run: |
+          cat << 'EOF' > infrastructure/environments/development/.env
+          APP_ENV=development
+          DB_USER=${{ secrets.DEV_DB_USER }}
+          DB_PASSWORD=${{ secrets.DEV_DB_PASSWORD }}
+          DB_NAME=${{ secrets.DEV_DB_NAME }}
+          EOF
+
+      - name: Build Development environment
+        run: | 
+          docker compose -f infrastructure/environments/development/docker-compose.yml --env-file infrastructure/environments/development/.env up -d --build
+        
+      - name: Show database logs if build fails
+        if: failure()
+        run: |
+          docker logs development-db-1 || true
+
+      - name: Wait for services to be healthy
+        run: |
+          sleep 10
+
+      - name: Test API health endpoint
+        run: |
+          curl -f http://localhost:3000 || exit 1
+
+      - name: Tear down Development environment
+        run: | 
+          docker compose -f infrastructure/environments/development/docker-compose.yml --env-file infrastructure/environments/development/.env down -v

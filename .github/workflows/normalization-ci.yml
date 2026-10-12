@@ -1,0 +1,29 @@
+name: Normalization CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'ai-services/normalization/**'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'ai-services/normalization/**'
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Compose
+        uses: docker/setup-compose-action@v1
+
+      - name: Build Development environment
+        working-directory: ai-services/normalization
+        run: | 
+          docker build -t rxnorm-normalizer --target test .
+        
+

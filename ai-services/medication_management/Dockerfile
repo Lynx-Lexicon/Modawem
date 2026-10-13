@@ -9,10 +9,10 @@ COPY src ./src
 
 FROM base AS test
 
-COPY tests ./tests
+RUN python -m pip install --no-cache-dir ".[dev]"
 
-RUN python -m pip install --no-cache-dir ".[dev]" \
-	&& pytest -q
+COPY tests ./tests
+RUN pytest -q
 
 # ---
 

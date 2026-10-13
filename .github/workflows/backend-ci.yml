@@ -5,9 +5,13 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
 
 jobs:
-  build-and-test:
+  # ─────────────────────────────────────────────────────
+  # DEVELOPMENT BUILD AND TEST
+  # ─────────────────────────────────────────────────────
+  development-build-and-test:
     runs-on: ubuntu-latest
 
     steps:
@@ -26,23 +30,93 @@ jobs:
           DB_NAME=${{ secrets.DEV_DB_NAME }}
           EOF
 
-      - name: Build Development environment
-        run: | 
+      - name: Build and test Development
+        run: |
           docker compose -f infrastructure/environments/development/docker-compose.yml --env-file infrastructure/environments/development/.env up -d --build
-        
-      - name: Show database logs if build fails
+          curl --retry 10 --retry-delay 3 --retry-all-errors -f http://localhost:3000
+
+      - name: Dump logs on failure
         if: failure()
         run: |
-          docker logs development-db-1 || true
+          docker compose -f infrastructure/environments/development/docker-compose.yml --env-file infrastructure/environments/development/.env logs
 
-      - name: Wait for services to be healthy
+      - name: Teardown Development
+        if: always()
         run: |
-          sleep 10
-
-      - name: Test API health endpoint
-        run: |
-          curl -f http://localhost:3000 || exit 1
-
-      - name: Tear down Development environment
-        run: | 
           docker compose -f infrastructure/environments/development/docker-compose.yml --env-file infrastructure/environments/development/.env down -v
+  # ─────────────────────────────────────────────────────
+  # STAGING BUILD AND TEST
+  # ─────────────────────────────────────────────────────
+  staging-build-and-test:
+    needs: development-build-and-test
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Compose
+        uses: docker/setup-compose-action@v1
+
+      - name: Create .env file for Staging
+        run: |
+          cat << EOF > infrastructure/environments/staging/.env
+          APP_ENV=staging
+          DB_USER=${{ secrets.STAGING_DB_USER }}
+          DB_PASSWORD=${{ secrets.STAGING_DB_PASSWORD }}
+          DB_NAME=${{ secrets.STAGING_DB_NAME }}
+          EOF
+
+      - name: Build and test Staging
+        run: |
+          docker compose -f infrastructure/environments/staging/docker-compose.yml --env-file infrastructure/environments/staging/.env up -d --build
+          curl --retry 10 --retry-delay 3 --retry-all-errors -f http://localhost:3001
+
+      - name: Dump logs on failure
+        if: failure()
+        run: |
+          docker compose -f infrastructure/environments/staging/docker-compose.yml --env-file infrastructure/environments/staging/.env logs
+
+      - name: Teardown Staging
+        if: always()
+        run: |
+          docker compose -f infrastructure/environments/staging/docker-compose.yml --env-file infrastructure/environments/staging/.env down -v
+  # ─────────────────────────────────────────────────────
+  # PRODUCTION BUILD AND TEST
+  # ─────────────────────────────────────────────────────
+  production-build-and-test:
+    needs: staging-build-and-test
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Compose
+        uses: docker/setup-compose-action@v1
+
+      - name: Create .env file for Production
+        run: |
+          cat << EOF > infrastructure/environments/production/.env
+          APP_ENV=production
+          DB_USER=${{ secrets.PROD_DB_USER }}
+          DB_PASSWORD=${{ secrets.PROD_DB_PASSWORD }}
+          DB_NAME=${{ secrets.PROD_DB_NAME }}
+          EOF
+
+      - name: Build and test Production
+        run: |
+          docker compose -f infrastructure/environments/production/docker-compose.yml --env-file infrastructure/environments/production/.env up -d --build
+          curl --retry 10 --retry-delay 3 --retry-all-errors -f http://localhost:3002
+
+      - name: Dump logs on failure
+        if: failure()
+        run: |
+          docker compose -f infrastructure/environments/production/docker-compose.yml --env-file infrastructure/environments/production/.env logs
+
+      - name: Teardown Production
+        if: always()
+        run: |
+          docker compose -f infrastructure/environments/production/docker-compose.yml --env-file infrastructure/environments/production/.env down -v

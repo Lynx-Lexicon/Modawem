@@ -5,40 +5,56 @@ on:
     branches: [main]
     paths:
      - 'apps/mobile/**'
+     - '.github/workflows/flutter-ci.yml'
   pull_request:
     branches: [main]
     paths:
     - 'apps/mobile/**'
+    - '.github/workflows/flutter-ci.yml'
 
 jobs:
   analyze-and-test:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/mobile
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        
+
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.38.6'
+          flutter-version: '3.47.7'
           channel: 'stable'
+      
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'zulu'
+
 
       - name: Install dependencies
-        working-directory: apps/mobile
         run: flutter pub get
 
       - name: Analyze code
-        working-directory: apps/mobile
         run: flutter analyze
 
       - name: Run tests
-        working-directory: apps/mobile
         run: flutter test
 
-      - name: Build APK (Development)
-        working-directory: apps/mobile
+      - name: Build APK - Development
         run: |
           flutter build apk --debug --dart-define=ENV=dev --dart-define=API_BASE_URL=http://10.0.2.2:3000
 
+      - name: Build APK - Staging
+        run: |
+          flutter build apk --release --dart-define=ENV=staging --dart-define=API_BASE_URL=http://10.0.2.2:3001
+
+      - name: Build APK - Production
+        run: |
+          flutter build apk --release --dart-define=ENV=prod --dart-define=API_BASE_URL=http://10.0.2.2:3002
+        
           

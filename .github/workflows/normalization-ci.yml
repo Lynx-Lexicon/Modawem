@@ -5,25 +5,28 @@ on:
     branches: [main]
     paths:
       - 'ai-services/normalization/**'
+      - '.github/workflows/normalization-ci.yml'
   pull_request:
     branches: [main]
     paths:
       - 'ai-services/normalization/**'
+      - '.github/workflows/normalization-ci.yml'
 
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ai-services/normalization
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Docker Compose
-        uses: docker/setup-compose-action@v1
-
-      - name: Build Development environment
-        working-directory: ai-services/normalization
+      - name: Run unit tests (test stage)
         run: | 
           docker build -t rxnorm-normalizer --target test .
-        
 
+      - name: Verify production image builds (runtime stage)
+        run: |
+          docker build -t rxnorm-normalizer --target runtime .

@@ -1,0 +1,30 @@
+name: Medication Management CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "ai-services/medication_management/**"
+      - ".github/workflows/medication-management-ci.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "ai-services/medication_management/**"
+      - ".github/workflows/medication-management-ci.yml"
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ai-services/medication_management
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run unit tests (test stage)
+        run: docker build -t medication-management --target test .
+
+      - name: Verify production image builds (runtime stage)
+        run: docker build -t medication-management --target runtime .

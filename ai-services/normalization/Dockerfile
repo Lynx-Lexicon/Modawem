@@ -8,12 +8,11 @@ COPY rxnorm_service ./rxnorm_service
 
 FROM base AS test
 
-RUN pip install --no-cache-dir ".[dev]"
-
 COPY pytest.ini ./
 COPY tests ./tests
 
-RUN pytest -q
+RUN pip install --no-cache-dir ".[dev]" \
+  && pytest -q
 
 # ---
 

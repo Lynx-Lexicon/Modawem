@@ -50,10 +50,23 @@ created.
 ### Run Tests with a Single Command
 
 ```bash
-python run_tests.py
+pytest -q
 ```
 
-All 37 unit, invariant, hand-calculated scenario, identity, and validation tests will run and report their verification status.
+The pytest suite runs all unit, invariant, hand-calculated scenario, identity,
+validation, and HTTP health-check tests.
+
+### Run the HTTP Server
+
+The service exposes only `GET /healthz` for now. Start it locally with:
+
+```powershell
+medication-management-server
+```
+
+It listens on `127.0.0.1:8080` by default. Set
+`MEDICATION_MANAGEMENT_SERVICE_HOST` and
+`MEDICATION_MANAGEMENT_SERVICE_PORT` to override the bind address and port.
 
 ---
 
@@ -198,7 +211,6 @@ medication_management/
 ├── docs/
 │   ├── ADHERENCE_METHODOLOGY.md  # Detailed clinical & mathematical documentation
 │   └── PR_DESCRIPTION.md         # Pull request description & review evidence
-├── run_tests.py                  # One-command automated test runner
 └── README.md                     # Project overview and reference manual
 ```
 

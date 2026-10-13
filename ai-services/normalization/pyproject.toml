@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "rxnorm-normalizer"
+version = "0.1.0"
+description = "Conservative RxNorm drug-name normalization service"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "requests>=2.31",
+    "rapidfuzz>=3.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4",
+]
+
+[project.scripts]
+rxnorm-normalize = "rxnorm_normalize:main"
+rxnorm-server = "rxnorm_service.server:main"
+
+[tool.setuptools]
+py-modules = ["rxnorm_normalize"]
+
+[tool.setuptools.packages.find]
+include = ["rxnorm_service*"]

@@ -1,0 +1,11 @@
+input,expected_rxcui,kind
+acetaminophen,161,correct
+aspirin,1191,correct
+ibuprofen,5640,correct
+metformin,6809,correct
+amoxicillin,723,correct
+paracetmol,161,misspelled
+asprin,1191,misspelled
+ibuprofin,5640,misspelled
+metformn,6809,misspelled
+amoxicilin,723,misspelled

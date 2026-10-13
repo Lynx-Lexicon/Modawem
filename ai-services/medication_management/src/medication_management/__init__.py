@@ -1,9 +1,4 @@
-"""Modawem Medication Adherence Package.
-
-Provides deterministic, interval-based calculations for:
-- Proportion of Days Covered (PDC)
-- Medication Possession Ratio (MPR)
-"""
+"""Medication adherence calculations for PDC and MPR."""
 
 from .models import AdherenceResult, DrugEquivalenceRule, PrescriptionFill
 from .mpr import calculate_mpr

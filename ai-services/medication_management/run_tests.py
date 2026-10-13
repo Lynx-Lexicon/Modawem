@@ -4,14 +4,10 @@ Can be run with a single command:
     python run_tests.py
 """
 
-import sys
 import unittest
 from pathlib import Path
 
-# Ensure src and root are in python path
 ROOT_DIR = Path(__file__).resolve().parent
-sys.path.insert(0, str(ROOT_DIR / "src"))
-sys.path.insert(0, str(ROOT_DIR))
 
 
 def main() -> int:
@@ -33,10 +29,12 @@ def main() -> int:
         print("=" * 80)
         return 0
     else:
-        print(f"STATUS: FAILED ({len(result.failures)} failures, {len(result.errors)} errors)")
+        print(
+            f"STATUS: FAILED ({len(result.failures)} failures, {len(result.errors)} errors)"
+        )
         print("=" * 80)
         return 1
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    raise SystemExit(main())

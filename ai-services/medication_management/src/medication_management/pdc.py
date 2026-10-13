@@ -22,7 +22,7 @@ Key rules implemented:
 from __future__ import annotations
 
 from datetime import date, datetime
-from typing import Any, Dict, Iterable, List, Optional, Union
+from typing import Any, Dict, Iterable, Optional, Union
 
 from .models import AdherenceResult, DrugEquivalenceRule, PrescriptionFill
 from .utils import (
@@ -135,7 +135,9 @@ def calculate_pdc(
         covered_days=covered_days,
         gaps_count=gaps_count,
         gap_days=gap_days,
-        covered_intervals=[(s.isoformat(), e.isoformat()) for s, e in clipped_intervals],
+        covered_intervals=[
+            (s.isoformat(), e.isoformat()) for s, e in clipped_intervals
+        ],
     )
 
     if as_dict:

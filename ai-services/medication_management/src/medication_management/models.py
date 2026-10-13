@@ -6,9 +6,37 @@ equivalence rules, and adherence calculation results.
 
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass, field
 from datetime import date
 from typing import Any, Dict, List, Optional, Set, Tuple
+
+
+def validate_days_supply(value: Any) -> int:
+    """Validate a days_supply value without coercing it."""
+    if not isinstance(value, int) or isinstance(value, bool):
+        raise TypeError(
+            f"days_supply must be a positive integer, got {value!r} "
+            f"({type(value).__name__})."
+        )
+    if value <= 0:
+        raise ValueError(
+            f"days_supply must be a positive integer greater than 0, got {value}."
+        )
+    return value
+
+
+def validate_drug_name(value: Optional[str]) -> Optional[str]:
+    """Validate an optional medication name without coercing it."""
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        raise TypeError(
+            f"drug_name must be a non-empty string or None, got {value!r} "
+            f"({type(value).__name__})."
+        )
+    if not value.strip():
+        raise ValueError("drug_name cannot be empty or whitespace-only.")
+    return value
 
 
 @dataclass(frozen=True)
@@ -30,10 +58,8 @@ class PrescriptionFill:
     refills: Optional[int] = None
 
     def __post_init__(self) -> None:
-        if self.days_supply <= 0:
-            raise ValueError(
-                f"days_supply must be a positive integer greater than 0, got {self.days_supply}."
-            )
+        validate_days_supply(self.days_supply)
+        validate_drug_name(self.drug_name)
 
 
 @dataclass

@@ -14,14 +14,9 @@ covering:
 10. Prior fill carry-over into observation window
 """
 
-import sys
 import unittest
-from pathlib import Path
 
-# Add src to path for direct test execution
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
-
-from adherence import DrugEquivalenceRule, calculate_mpr, calculate_pdc
+from medication_management import DrugEquivalenceRule, calculate_mpr, calculate_pdc
 
 
 class TestHandCalculatedScenarios(unittest.TestCase):

@@ -1,14 +1,10 @@
 """Unit tests and invariant verifications for PDC calculation."""
 
 import random
-import sys
 import unittest
 from datetime import date, timedelta
-from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
-
-from adherence import PrescriptionFill, calculate_pdc
+from medication_management import calculate_pdc
 
 
 class TestPDCInvariantsAndEdges(unittest.TestCase):
@@ -99,7 +95,9 @@ class TestPDCInvariantsAndEdges(unittest.TestCase):
             fills.sort(key=lambda x: x["fill_date"])
 
             # 1. Interval calculation under test
-            res_interval = calculate_pdc(fills, obs_start, obs_end, include_prior_fills=True)
+            res_interval = calculate_pdc(
+                fills, obs_start, obs_end, include_prior_fills=True
+            )
 
             # 2. Naive day-set simulation with stockpiling
             covered_days_set = set()

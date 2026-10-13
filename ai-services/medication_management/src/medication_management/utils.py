@@ -9,7 +9,11 @@ from __future__ import annotations
 from datetime import date, datetime, timedelta
 from typing import Any, Dict, Iterable, List, Optional, Tuple, Union
 
-from .models import DrugEquivalenceRule, PrescriptionFill
+from .models import (
+    DrugEquivalenceRule,
+    PrescriptionFill,
+    validate_days_supply,
+)
 
 
 def parse_date(value: Union[str, date, datetime]) -> date:
@@ -89,10 +93,11 @@ def normalize_fills(
 ) -> List[PrescriptionFill]:
     """Normalizes and filters raw fill inputs into validated PrescriptionFill objects.
 
-    Applies therapeutic equivalence rules:
-    - If target_drug or equivalence_rule is specified, fills for different non-equivalent
-      drugs are excluded from the calculation.
-    - If neither is provided, all fills are assumed relevant to the adherence calculation.
+    Applies therapeutic equivalence rules. Histories mixing named and unnamed fills
+    are rejected because an unnamed fill cannot be assigned safely to a target.
+    Multiple distinct named medications are also rejected without an explicit target
+    or equivalence rule. An entirely unnamed history is accepted under the caller's
+    responsibility.
 
     Args:
         fills: Iterable of dicts or PrescriptionFill instances.
@@ -103,29 +108,35 @@ def normalize_fills(
         List of PrescriptionFill objects sorted chronologically by fill_date.
     """
     eq_checker: Optional[DrugEquivalenceRule] = equivalence_rule
+    if target_drug is not None and equivalence_rule is not None:
+        if target_drug.strip().lower() != equivalence_rule.target_drug.strip().lower():
+            raise ValueError(
+                "target_drug must match equivalence_rule.target_drug when both are provided."
+            )
     if eq_checker is None and target_drug is not None:
         eq_checker = DrugEquivalenceRule(target_drug=target_drug)
 
     normalized: List[PrescriptionFill] = []
+    named_drugs = set()
+    has_named_fill = False
+    has_unnamed_fill = False
 
     for idx, item in enumerate(fills):
         if isinstance(item, PrescriptionFill):
             fill_obj = item
         elif isinstance(item, dict):
             if "fill_date" not in item:
-                raise ValueError(f"Fill at index {idx} missing required key 'fill_date'.")
+                raise ValueError(
+                    f"Fill at index {idx} missing required key 'fill_date'."
+                )
             if "days_supply" not in item:
-                raise ValueError(f"Fill at index {idx} missing required key 'days_supply'.")
+                raise ValueError(
+                    f"Fill at index {idx} missing required key 'days_supply'."
+                )
 
             parsed_d = parse_date(item["fill_date"])
             days_sup = item["days_supply"]
-            if not isinstance(days_sup, int) or isinstance(days_sup, bool):
-                try:
-                    days_sup = int(days_sup)
-                except (ValueError, TypeError) as err:
-                    raise ValueError(
-                        f"Fill at index {idx} has non-integer days_supply: {item['days_supply']}"
-                    ) from err
+            validate_days_supply(days_sup)
 
             fill_obj = PrescriptionFill(
                 fill_date=parsed_d,
@@ -139,6 +150,17 @@ def normalize_fills(
                 f"Fill at index {idx} has unsupported type {type(item).__name__}. Expected dict or PrescriptionFill."
             )
 
+        if fill_obj.drug_name is not None:
+            has_named_fill = True
+            if not isinstance(fill_obj.drug_name, str):
+                raise TypeError(
+                    f"Fill at index {idx} has invalid drug_name type "
+                    f"{type(fill_obj.drug_name).__name__}; expected str or None."
+                )
+            named_drugs.add(fill_obj.drug_name.strip().lower())
+        else:
+            has_unnamed_fill = True
+
         # Therapeutic equivalence check
         if eq_checker is not None:
             if not eq_checker.is_equivalent(fill_obj.drug_name):
@@ -146,6 +168,18 @@ def normalize_fills(
                 continue
 
         normalized.append(fill_obj)
+
+    if has_named_fill and has_unnamed_fill:
+        raise ValueError(
+            "Cannot mix named and unnamed medication fills; every fill must have "
+            "a medication identity or all fills must be unnamed."
+        )
+
+    if eq_checker is None and len(named_drugs) > 1:
+        raise ValueError(
+            "Multiple medications were supplied without target_drug or "
+            "equivalence_rule. Identify one target medication explicitly."
+        )
 
     # Sort strictly by fill_date
     normalized.sort(key=lambda f: f.fill_date)

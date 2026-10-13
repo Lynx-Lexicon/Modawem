@@ -1,12 +1,8 @@
 """Unit tests and invariant verifications for MPR calculation."""
 
-import sys
 import unittest
-from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
-
-from adherence import calculate_mpr
+from medication_management import calculate_mpr
 
 
 class TestMPRInvariantsAndEdges(unittest.TestCase):

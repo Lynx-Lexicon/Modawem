@@ -1,14 +1,10 @@
 """Performance and scalability test for interval-based adherence calculation."""
 
-import sys
 import time
 import unittest
 from datetime import date, timedelta
-from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
-
-from adherence import calculate_mpr, calculate_pdc
+from medication_management import calculate_mpr, calculate_pdc
 
 
 class TestAdherencePerformance(unittest.TestCase):
@@ -26,10 +22,12 @@ class TestAdherencePerformance(unittest.TestCase):
         fills = []
         cur = start
         while cur <= end:
-            fills.append({
-                "fill_date": cur.isoformat(),
-                "days_supply": 30,
-            })
+            fills.append(
+                {
+                    "fill_date": cur.isoformat(),
+                    "days_supply": 30,
+                }
+            )
             # Add a realistic refill interval of 28 to 33 days
             cur += timedelta(days=30)
 

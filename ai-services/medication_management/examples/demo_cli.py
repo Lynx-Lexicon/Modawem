@@ -5,9 +5,7 @@ import json
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
-
-from adherence import calculate_mpr, calculate_pdc
+from medication_management import calculate_mpr, calculate_pdc
 
 
 def process_single(fills, start_date, end_date, metric, detailed):
@@ -67,19 +65,26 @@ def main():
                     args.metric,
                     args.detailed,
                 )
-                output["results"].append({
-                    "name": sample.get("name"),
-                    "description": sample.get("description"),
-                    "output": res,
-                })
+                output["results"].append(
+                    {
+                        "name": sample.get("name"),
+                        "description": sample.get("description"),
+                        "output": res,
+                    }
+                )
         else:
             fills = data.get("fills", [])
             start_date = data.get("start_date")
             end_date = data.get("end_date")
-            output = process_single(fills, start_date, end_date, args.metric, args.detailed)
+            output = process_single(
+                fills, start_date, end_date, args.metric, args.detailed
+            )
     else:
         if not args.start or not args.end:
-            print("Error: Either --file or both --start and --end must be specified.", file=sys.stderr)
+            print(
+                "Error: Either --file or both --start and --end must be specified.",
+                file=sys.stderr,
+            )
             sys.exit(1)
         fills = []
         start_date = args.start

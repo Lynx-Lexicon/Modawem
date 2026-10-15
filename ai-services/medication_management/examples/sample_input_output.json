@@ -1,0 +1,125 @@
+{
+  "description": "Modawem Task 2 - Medication Adherence Sample Input and Output Test Cases",
+  "samples": [
+    {
+      "name": "PDF_Example_Partial_Adherence",
+      "description": "Matches exact sample shape in task prompt specification (30 days supply in 40 days observation period)",
+      "input": {
+        "start_date": "2026-01-01",
+        "end_date": "2026-02-09",
+        "observation_days": 40,
+        "fills": [
+          {
+            "fill_date": "2026-01-01",
+            "days_supply": 30
+          }
+        ]
+      },
+      "expected_pdc_output": {
+        "value": 0.75,
+        "percentage": 75.0,
+        "observation_days": 40,
+        "covered_days": 30
+      },
+      "expected_mpr_output": {
+        "value": 0.75,
+        "percentage": 75.0,
+        "observation_days": 40,
+        "total_days_supply": 30
+      }
+    },
+    {
+      "name": "Overlapping_Refills_Stockpiling_Over_Supply",
+      "description": "Demonstrates stockpiling push-forward: PDC is capped at 100%, MPR reaches 133.33%",
+      "input": {
+        "start_date": "2026-01-01",
+        "end_date": "2026-01-30",
+        "observation_days": 30,
+        "fills": [
+          {
+            "fill_date": "2026-01-01",
+            "days_supply": 20
+          },
+          {
+            "fill_date": "2026-01-15",
+            "days_supply": 20
+          }
+        ]
+      },
+      "expected_pdc_output": {
+        "value": 1.0,
+        "percentage": 100.0,
+        "observation_days": 30,
+        "covered_days": 30
+      },
+      "expected_mpr_output": {
+        "value": 1.3333333333333333,
+        "percentage": 133.33,
+        "observation_days": 30,
+        "total_days_supply": 40
+      }
+    },
+    {
+      "name": "Gaps_Between_Refills",
+      "description": "Demonstrates delayed refills with uncovered intervals",
+      "input": {
+        "start_date": "2026-01-01",
+        "end_date": "2026-02-19",
+        "observation_days": 50,
+        "fills": [
+          {
+            "fill_date": "2026-01-01",
+            "days_supply": 20
+          },
+          {
+            "fill_date": "2026-02-01",
+            "days_supply": 15
+          }
+        ]
+      },
+      "expected_pdc_output": {
+        "value": 0.7,
+        "percentage": 70.0,
+        "observation_days": 50,
+        "covered_days": 35
+      },
+      "expected_mpr_output": {
+        "value": 0.7,
+        "percentage": 70.0,
+        "observation_days": 50,
+        "total_days_supply": 35
+      }
+    },
+    {
+      "name": "Observation_Boundaries_Fills",
+      "description": "Demonstrates boundary fills on exact start_date and exact end_date",
+      "input": {
+        "start_date": "2026-01-01",
+        "end_date": "2026-01-10",
+        "observation_days": 10,
+        "fills": [
+          {
+            "fill_date": "2026-01-01",
+            "days_supply": 3
+          },
+          {
+            "fill_date": "2026-01-10",
+            "days_supply": 5
+          }
+        ]
+      },
+      "expected_pdc_output": {
+        "value": 0.4,
+        "percentage": 40.0,
+        "observation_days": 10,
+        "covered_days": 4
+      },
+      "expected_mpr_output": {
+        "value": 0.8,
+        "percentage": 80.0,
+        "observation_days": 10,
+        "total_days_supply": 8
+      }
+    }
+  ]
+}

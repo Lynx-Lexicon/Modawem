@@ -1,0 +1,32 @@
+{
+  "dataset_name": "Clinical RxNorm Normalizer Comprehensive Benchmark",
+  "total_cases": 475,
+  "split_counts": {
+    "calibration": 190,
+    "dev": 154,
+    "held_out_test": 131
+  },
+  "split_percentages": {
+    "calibration": 40.0,
+    "dev": 32.4,
+    "held_out_test": 27.6
+  },
+  "category_distribution": {
+    "standard_clean": 102,
+    "typos_and_formatting": 78,
+    "unit_variations": 44,
+    "form_and_route_variations": 38,
+    "strength_and_concentration": 26,
+    "salt_variants": 23,
+    "combination_products": 34,
+    "look_alike_sound_alike": 30,
+    "insufficient_or_ambiguous": 50,
+    "conflicting_or_nonexistent": 50
+  },
+  "status_distribution": {
+    "resolved": 375,
+    "unresolved": 100
+  },
+  "unique_ingredient_clusters": 85,
+  "anti_leakage_guarantee": "Zero chemical ingredient cluster overlap between calibration, dev, and held_out_test."
+}

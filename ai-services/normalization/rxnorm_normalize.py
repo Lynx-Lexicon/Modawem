@@ -39,11 +39,21 @@ import sys
 import time
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import asdict, dataclass, field as dataclass_field
+from pathlib import Path
+import sqlite3
 from threading import Lock
 from typing import Optional
+from urllib.parse import urlencode
 
 import requests
 from rapidfuzz import fuzz
+
+BASE_DIR = Path(__file__).resolve().parent
+CACHE_DB_PATH = BASE_DIR / "data" / "cache" / "rxnorm_http_cache.sqlite"
+if not CACHE_DB_PATH.exists():
+    ROOT_CACHE = Path("D:/modawem/data/cache/rxnorm_http_cache.sqlite")
+    if ROOT_CACHE.exists():
+        CACHE_DB_PATH = ROOT_CACHE
 
 BASE_URL = os.environ.get("RXNORM_BASE_URL", "https://rxnav.nlm.nih.gov/REST")
 TIMEOUT_SEC = 5
@@ -58,7 +68,7 @@ PRODUCT_TTY = {"SCD", "SBD"}
 INGREDIENT_TTY = {"IN", "PIN", "MIN"}
 
 _STRENGTH = re.compile(
-    r"\b\d+(?:\.\d+)?\s*(?:mg|mcg|µg|g|ml|iu|units?|%)"
+    r"\b\d+(?:\.\d+)?\s*(?:mg|mcg|µg|ug|g|ml|iu|units?|%)"
     r"(?:\s*/\s*\d*(?:\.\d+)?\s*(?:ml|mg|g|l))?\b",
     re.I,
 )
@@ -66,7 +76,7 @@ _FORMS = re.compile(
     r"\b(tablets?|tabs?|capsules?|caps?|syrup|suspension|cream|ointment|"
     r"solution|drops?|gel|patch|chewable|chewables|er|xr|sr|film[- ]coated|"
     r"extended[- ]release|delayed[- ]release|immediate[- ]release|"
-    r"modified[- ]release)\b",
+    r"modified[- ]release|disintegrating(?: oral tablet)?|odt)\b",
     re.I,
 )
 _ROUTES = re.compile(
@@ -105,9 +115,9 @@ _FORM_CANON = {
     "patch": "patch",
     "chewable": "chewable",
     "chewables": "chewable",
-    "er": "er",
-    "xr": "xr",
-    "sr": "sr",
+    "er": "extended-release",
+    "xr": "extended-release",
+    "sr": "extended-release",
     "film-coated": "film-coated",
     "film coated": "film-coated",
     "extended-release": "extended-release",
@@ -118,6 +128,15 @@ _FORM_CANON = {
     "immediate release": "immediate-release",
     "modified-release": "modified-release",
     "modified release": "modified-release",
+    "disintegrating oral tablet": "disintegrating oral tablet",
+    "disintegrating": "disintegrating oral tablet",
+    "odt": "disintegrating oral tablet",
+}
+_SPECIAL_FORMS = {
+    "extended-release",
+    "delayed-release",
+    "modified-release",
+    "disintegrating oral tablet",
 }
 _SALT_CANON = {
     "hcl": "hydrochloride",
@@ -181,8 +200,31 @@ class RxNormUnavailable(Exception):
 
 
 def normalize_query(text: str) -> str:
-    """Harmless lookup cleanup: case, punctuation, whitespace. Keeps clinical tokens."""
+    """Harmless lookup cleanup: case, punctuation, whitespace, unit separation, clinical abbreviations."""
     t = text.lower().strip()
+    # 1. Normalize combination slashes to have spaces: " / "
+    t = re.sub(r"\s*/\s*", " / ", t)
+    # 2. Slashes in concentrations/strengths should have NO spaces: e.g. "100 mg / 5 ml" -> "100 mg/5 ml"
+    t = re.sub(r"\s*/\s*(?=\d*\s*(?:ml|mg|g|l)\b)", "/", t, flags=re.I)
+    # 3. Separate attached numbers and units: e.g. 500mg -> 500 mg, 10mcg -> 10 mcg, 5ml -> 5 ml
+    t = re.sub(r"(?<=\d)(mg|mcg|µg|ug|g|ml|l|meq|iu|units?|%)\b", r" \1", t, flags=re.I)
+    # 4. Separate attached numbers and dosage forms: e.g. 10tab -> 10 tab
+    t = re.sub(r"(?<=\d)(tabs?|caps?)\b", r" \1", t, flags=re.I)
+    # 5. Safe clinical abbreviations at word boundaries (preserves drug names)
+    abbrev_map = [
+        (r"\btabs?\b", "tablet"),
+        (r"\bcaps?\b", "capsule"),
+        (r"\bsusp\b", "suspension"),
+        (r"\bsoln\b", "solution"),
+        (r"\bpo\b", "oral"),
+        (r"\bhcl\b", "hydrochloride"),
+        (r"\bodt\b", "disintegrating oral tablet"),
+        (r"\bdr\b", "delayed release"),
+        (r"\b(?:xr|er|sr)\b", "extended release"),
+    ]
+    for pattern, repl in abbrev_map:
+        t = re.sub(pattern, repl, t, flags=re.I)
+    # 6. Punctuation cleanup (keeping / % . -)
     t = re.sub(r"[^\w\s/%.-]", " ", t)
     return re.sub(r"\s+", " ", t).strip()
 
@@ -205,9 +247,128 @@ def _canon_strength(raw: str) -> str:
     return s
 
 
+def canonicalize_strength(st: str) -> Optional[tuple[float, str]]:
+    """Convert strength string into canonical (value, unit) tuple.
+
+    Mass units (mcg, mg, g) -> (mg_value, 'mg')
+    Liquid concentration ratios (X mg / Y mL) -> (mg_per_ml, 'mg/ml')
+    Other units -> (value, 'unit')
+    """
+    st = st.lower().strip()
+    if "/" in st:
+        parts = st.split("/", 1)
+        num_str, denom_str = parts[0].strip(), parts[1].strip()
+        num_m = re.match(
+            r"^(\d+(?:\.\d+)?)\s*(mg|mcg|µg|ug|g|meq|iu|units?|%)?$", num_str
+        )
+        denom_m = re.match(r"^(\d+(?:\.\d+)?\s*)?(ml|l|mg|g)?$", denom_str)
+        if num_m and denom_m:
+            num_val = float(num_m.group(1))
+            num_unit = (num_m.group(2) or "mg").lower()
+            denom_val_str = denom_m.group(1)
+            denom_val = (
+                float(denom_val_str.strip())
+                if denom_val_str and denom_val_str.strip()
+                else 1.0
+            )
+            denom_unit = (denom_m.group(2) or "ml").lower()
+
+            if num_unit in ("mcg", "µg", "ug"):
+                num_mg = num_val / 1000.0
+            elif num_unit == "mg":
+                num_mg = num_val
+            elif num_unit == "g":
+                num_mg = num_val * 1000.0
+            else:
+                num_mg = None
+
+            if denom_unit == "ml":
+                denom_ml = denom_val
+            elif denom_unit == "l":
+                denom_ml = denom_val * 1000.0
+            else:
+                denom_ml = None
+
+            if num_mg is not None and denom_ml is not None and denom_ml > 0:
+                return (round(num_mg / denom_ml, 6), "mg/ml")
+
+    m = re.match(r"^(\d+(?:\.\d+)?)\s*(mg|mcg|µg|ug|g|ml|l|meq|iu|units?|%)$", st)
+    if m:
+        val = float(m.group(1))
+        unit = m.group(2).lower()
+        if unit in ("mcg", "µg", "ug"):
+            return (round(val / 1000.0, 6), "mg")
+        elif unit == "mg":
+            return (round(val, 6), "mg")
+        elif unit == "g":
+            return (round(val * 1000.0, 6), "mg")
+        elif unit in ("units", "unit"):
+            return (round(val, 6), "unit")
+        else:
+            return (round(val, 6), unit)
+    return None
+
+
+def are_strengths_compatible(
+    requested: tuple[str, ...], available: tuple[str, ...]
+) -> bool:
+    """Check if every requested strength has a mathematically compatible available strength."""
+    if not requested:
+        return True
+    if not available:
+        return False
+    avail_canon = [canonicalize_strength(s) for s in available]
+    avail_raw = list(available)
+    for req in requested:
+        r_c = canonicalize_strength(req)
+        match_idx = None
+        for idx, a_c in enumerate(avail_canon):
+            if r_c is not None and a_c is not None:
+                if abs(r_c[0] - a_c[0]) < 1e-5 and r_c[1] == a_c[1]:
+                    match_idx = idx
+                    break
+            elif req == avail_raw[idx]:
+                match_idx = idx
+                break
+        if match_idx is None:
+            return False
+        avail_canon.pop(match_idx)
+        avail_raw.pop(match_idx)
+    return True
+
+
+def _canonicalize_query_strengths(text: str) -> str:
+    """Replace liquid ratios (e.g. 250 mg/5 ml) and mcg with their RxNorm canonical forms (50 mg/ml, 0.05 mg)."""
+    t = text
+
+    def repl_ratio(m: re.Match) -> str:
+        num = float(m.group(1))
+        denom_str = m.group(2)
+        denom = float(denom_str) if denom_str and denom_str.strip() else 1.0
+        if denom > 0:
+            ratio = num / denom
+            return f"{format(ratio, 'g')} mg/ml"
+        return m.group(0)
+
+    t = re.sub(
+        r"\b(\d+(?:\.\d+)?)\s*mg\s*/\s*(\d+(?:\.\d+)?)?\s*ml\b",
+        repl_ratio,
+        t,
+        flags=re.I,
+    )
+
+    def repl_mcg(m: re.Match) -> str:
+        val = float(m.group(1))
+        mg = val / 1000.0
+        return f"{format(mg, 'g')} mg"
+
+    t = re.sub(r"\b(\d+(?:\.\d+)?)\s*(?:mcg|µg|ug)\b", repl_mcg, t, flags=re.I)
+    return t
+
+
 def parse_identity(text: str) -> Identity:
     """Interpret medication attributes. Does not remove them from the lookup string."""
-    t = text.lower()
+    t = normalize_query(text)
     strength_matches = tuple(_STRENGTH.finditer(t))
     strength_spans = tuple(match.span() for match in strength_matches)
     explicit_combination = any(
@@ -239,10 +400,6 @@ def parse_identity(text: str) -> Identity:
     stripped = _TRAILING_SALT.sub(" ", stripped)
     stripped = stripped.replace("/", " ")
     leftover = [w for w in re.findall(r"[a-z0-9]+", stripped) if w not in _FILLER]
-    # A slash inside a strength (100 mg/5 mL) was already consumed above. A
-    # remaining separator is an explicit combination marker. Multiple words
-    # are intentionally not enough: brands and ingredient qualifiers are often
-    # multiword names too.
     combination = explicit_combination
     return Identity(
         strengths,
@@ -254,7 +411,6 @@ def parse_identity(text: str) -> Identity:
     )
 
 
-
 def attributes_compatible(query: Identity, candidate_name: str) -> bool:
     """True when candidate attributes confirm the requested attributes."""
     return _attribute_state(query, candidate_name) == "compatible"
@@ -263,16 +419,38 @@ def attributes_compatible(query: Identity, candidate_name: str) -> bool:
 def _attribute_state(query: Identity, candidate_name: str) -> str:
     """Classify candidate attributes as compatible, missing, or conflicting."""
     cand = parse_identity(candidate_name)
-    for requested, available in (
-        (query.strengths, cand.strengths),
-        (query.forms, cand.forms),
-        (query.routes, cand.routes),
-        (query.salts, cand.salts),
+
+    # 1. Strengths: mathematical compatibility
+    if query.strengths and not cand.strengths:
+        return "missing"
+    if query.strengths and not are_strengths_compatible(
+        query.strengths, cand.strengths
     ):
-        if requested and not available:
-            return "missing"
-        if requested and available and not set(requested).issubset(available):
-            return "conflict"
+        return "conflict"
+
+    # 2. Forms: subset plus unrequested special forms
+    if query.forms and not cand.forms:
+        return "missing"
+    if query.forms and cand.forms and not set(query.forms).issubset(cand.forms):
+        return "conflict"
+    cand_special = set(cand.forms) & _SPECIAL_FORMS
+    query_special = set(query.forms) & _SPECIAL_FORMS
+    if cand_special and not cand_special.issubset(query_special):
+        return "conflict"
+
+    # 3. Routes
+    if query.routes and not cand.routes:
+        return "missing"
+    if query.routes and cand.routes and not set(query.routes).issubset(cand.routes):
+        return "conflict"
+
+    # 4. Salts
+    if query.salts and not cand.salts:
+        return "missing"
+    if query.salts and cand.salts and not set(query.salts).issubset(cand.salts):
+        return "conflict"
+
+    # 5. Combinations
     if query.combination and not cand.combination:
         return "conflict"
     if not query.combination and cand.combination:
@@ -375,6 +553,24 @@ ACCEPT_THRESHOLD = _calibrate_accept_threshold()
 
 # ---------------------------------------------------------------- API layer
 def _get(path: str, params: dict) -> dict:
+    if CACHE_DB_PATH and CACHE_DB_PATH.exists():
+        try:
+            param_str = urlencode(sorted((k, str(v)) for k, v in params.items()))
+            cache_key = f"{path}?{param_str}" if param_str else path
+            with sqlite3.connect(CACHE_DB_PATH) as conn:
+                cur = conn.cursor()
+                cur.execute(
+                    "SELECT response_json FROM http_cache WHERE cache_key = ?",
+                    (cache_key,),
+                )
+                row = cur.fetchone()
+                if row:
+                    payload = json.loads(row[0])
+                    if isinstance(payload, dict):
+                        return payload
+        except Exception:
+            pass
+
     last: Exception | None = None
     for attempt in range(RETRIES + 1):
         try:
@@ -383,6 +579,23 @@ def _get(path: str, params: dict) -> dict:
             payload = r.json()
             if not isinstance(payload, dict):
                 raise ValueError("response JSON must be an object")
+            if CACHE_DB_PATH and CACHE_DB_PATH.exists():
+                try:
+                    param_str = urlencode(sorted((k, str(v)) for k, v in params.items()))
+                    cache_key = f"{path}?{param_str}" if param_str else path
+                    with sqlite3.connect(CACHE_DB_PATH) as conn:
+                        conn.execute(
+                            "INSERT OR REPLACE INTO http_cache (cache_key, path, params, response_json) VALUES (?, ?, ?, ?)",
+                            (
+                                cache_key,
+                                path,
+                                json.dumps(params),
+                                json.dumps(payload, ensure_ascii=False),
+                            ),
+                        )
+                        conn.commit()
+                except Exception:
+                    pass
             return payload
         except requests.HTTPError as e:
             last = e
@@ -580,25 +793,48 @@ class RxNormNormalizer:
             seen.add(rxcui)
             ordered.append((rxcui, text))
 
-        exact = _exact(term)
-        self._log("exact:", exact)
-        for rx in exact:
-            add(rx, None)
+        def collect(lookup_term: str) -> None:
+            exact = _exact(lookup_term)
+            self._log("exact:", exact)
+            for rx in exact:
+                add(rx, None)
 
-        sugg = _spelling(term)[:5]
-        self._log("spelling suggestions:", sugg)
-        for s in sugg:
-            for rx in _exact(s):
-                add(rx, s.lower())
+            sugg = _spelling(lookup_term)[:5]
+            self._log("spelling suggestions:", sugg)
+            for s in sugg:
+                for rx in _exact(s):
+                    add(rx, s.lower())
 
-        approx = _approx(term)
-        diagnostics = getattr(approx, "diagnostics", [])
-        self.diagnostics.extend(diagnostics)
-        for diagnostic in diagnostics:
-            self._log("approximate:", diagnostic)
-        self._log("approximate:", approx[:5])
-        for c in approx:
-            add(c.get("rxcui"), None)
+            approx = _approx(lookup_term)
+            diagnostics = getattr(approx, "diagnostics", [])
+            self.diagnostics.extend(diagnostics)
+            for diagnostic in diagnostics:
+                self._log("approximate:", diagnostic)
+            self._log("approximate:", approx[:5])
+            for c in approx:
+                add(c.get("rxcui"), None)
+
+        collect(term)
+
+        canon_term = _canonicalize_query_strengths(term)
+        if canon_term != term:
+            try:
+                collect(canon_term)
+            except RxNormUnavailable:
+                pass
+
+        if not ordered and " / " in term:
+            try:
+                parts = term.split(" / ")
+                if len(parts) == 2:
+                    reordered = f"{parts[1].strip()} / {parts[0].strip()}"
+                    collect(reordered)
+                    canon_reordered = _canonicalize_query_strengths(reordered)
+                    if canon_reordered != reordered:
+                        collect(canon_reordered)
+            except RxNormUnavailable:
+                pass
+
         return ordered
 
     @staticmethod
@@ -644,10 +880,20 @@ class RxNormNormalizer:
             if identity.combination and tty == "IN":
                 continue
             score = _lexical_score(term, name)
+            canon_term = _canonicalize_query_strengths(term)
+            if canon_term != term:
+                score = max(score, _lexical_score(canon_term, name))
             if text and not identity.has_modifier():
                 score = max(score, _lexical_score(term, normalize_query(text)))
             scored.append((rxcui, score, name, tty))
-        scored.sort(key=lambda row: (-row[1], row[0], row[2]))
+        scored.sort(
+            key=lambda row: (
+                -row[1],
+                0 if row[3] == "SCD" else 1,
+                row[0],
+                row[2],
+            )
+        )
         return scored
 
     def accept(
@@ -725,9 +971,60 @@ class RxNormNormalizer:
             )
 
         rivals = []
+        top_ident = parse_identity(top_name)
+        top_ing_str = " ".join(top_ident.ingredient_tokens)
+        query_ing_str = " ".join(identity.ingredient_tokens)
+        top_ing_score = (
+            max(
+                fuzz.ratio(query_ing_str, top_ing_str),
+                fuzz.token_sort_ratio(query_ing_str, top_ing_str),
+            )
+            / 100.0
+            if query_ing_str and top_ing_str
+            else 1.0
+        )
+
+        top_name_clean = normalize_query(top_name)
+        canon_top = _canonicalize_query_strengths(top_name_clean)
+        term_clean = normalize_query(original)
+        canon_term = _canonicalize_query_strengths(term_clean)
+        top_is_exact = (
+            fuzz.ratio(term_clean, top_name_clean) == 100
+            or fuzz.ratio(canon_term, canon_top) == 100
+            or fuzz.token_sort_ratio(term_clean, top_name_clean) == 100
+            or fuzz.token_sort_ratio(canon_term, canon_top) == 100
+        )
+
         for rxcui, score, name, _tty in compatible[1:]:
             if self._same_concept_family(top_rxcui, rxcui):
                 continue
+            if top_is_exact:
+                name_clean = normalize_query(name)
+                canon_name = _canonicalize_query_strengths(name_clean)
+                rival_is_exact = (
+                    fuzz.ratio(term_clean, name_clean) == 100
+                    or fuzz.ratio(canon_term, canon_name) == 100
+                    or fuzz.token_sort_ratio(term_clean, name_clean) == 100
+                    or fuzz.token_sort_ratio(canon_term, canon_name) == 100
+                )
+                if not rival_is_exact:
+                    continue
+            if query_ing_str:
+                rival_ident = parse_identity(name)
+                rival_ing_str = " ".join(rival_ident.ingredient_tokens)
+                if rival_ing_str:
+                    rival_ing_score = (
+                        max(
+                            fuzz.ratio(query_ing_str, rival_ing_str),
+                            fuzz.token_sort_ratio(query_ing_str, rival_ing_str),
+                        )
+                        / 100.0
+                    )
+                    if top_ing_score >= ACCEPT_THRESHOLD and (
+                        rival_ing_score < ACCEPT_THRESHOLD
+                        or (top_ing_score - rival_ing_score > AMBIGUITY_MARGIN)
+                    ):
+                        continue
             rivals.append((score, name))
         if (
             rivals
@@ -788,11 +1085,24 @@ class RxNormNormalizer:
         return False
 
     def _same_concept_family(self, first: str, second: str) -> bool:
-        """Allow only an explicit brand/ingredient relationship to group rivals."""
+        """Allow explicit brand/ingredient relationship or SCD/SBD brand product relationship."""
         if first == second:
             return True
-        _, first_tty = self._get_props(first)
-        _, second_tty = self._get_props(second)
+        first_name, first_tty = self._get_props(first)
+        second_name, second_tty = self._get_props(second)
+        first_tty = self._canonical_tty(first_tty)
+        second_tty = self._canonical_tty(second_tty)
+
+        # 1. SCD <-> SBD relationship: SBD name in RxNorm is always "<SCD Name> [<Brand Name>]"
+        if (first_tty == "SCD" and second_tty == "SBD") or (
+            first_tty == "SBD" and second_tty == "SCD"
+        ):
+            scd_name = first_name if first_tty == "SCD" else second_name
+            sbd_name = second_name if first_tty == "SCD" else first_name
+            if sbd_name.strip().lower().startswith(f"{scd_name.strip().lower()} ["):
+                return True
+
+        # 2. Brand / Ingredient relationship
         if first_tty == second_tty:
             return False
         brand_ingredient = (first_tty == "BN" and second_tty in INGREDIENT_TTY) or (

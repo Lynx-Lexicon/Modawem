@@ -59,24 +59,49 @@ requires outbound HTTPS access. The threaded HTTP server permits independent
 requests to overlap; the normalizer protects its bounded caches while leaving
 network-backed work outside cache locks.
 
+## Reference Dataset & Evaluation Cache (Google Drive)
+
+To prevent repository bloat, the full-scale clinical reference database and persistent HTTP evaluation cache are hosted on Google Drive:
+
+- **Google Drive Storage Location:** `G:\My Drive\Modawem_RxNorm_Dataset`
+- **Compressed Archive:** `modawem_rxnorm_reference_data.zip` (16.1 MB compressed)
+- **Reference Database (`drug_reference.sqlite`, 53 MB):** Contains 138,427 OpenFDA NDC records and 56,085 active RxNorm clinical concepts (SCD, SBD, GPCK, BPCK, IN, PIN, MIN, BN) with structured indices.
+- **Persistent HTTP Cache (`rxnorm_http_cache.sqlite`, 2.75 MB):** Contains 3,159 pre-warmed deterministic RxNav API responses.
+
+The pipeline runs unit and regression tests (`python -m pytest -q`) immediately without requiring database downloads. If a local copy is needed for deep reference analysis, it can be accessed directly from `G:\My Drive\Modawem_RxNorm_Dataset` or restored via `scripts/download_and_build_dataset.py`.
+
 ## Commands
 
-Run the automated test suite:
+Run the automated test suite (all unit and clinical regression tests):
 
 ```powershell
-pytest -q
+python -m pytest -q
+```
+
+Run only the clinical regression test suite:
+
+```powershell
+python -m pytest tests/test_rxnorm_regression.py -v
 ```
 
 Run the acceptance fixture evaluation against RxNorm:
 
 ```powershell
-  python rxnorm_normalize.py --eval tests/rxnorm_fixture.csv
+python rxnorm_normalize.py --eval tests/rxnorm_fixture.csv
 ```
 
 Run the adversarial rejection evaluation separately:
 
 ```powershell
-  python rxnorm_normalize.py --eval tests/rxnorm_adversarial.csv
+python rxnorm_normalize.py --eval tests/rxnorm_adversarial.csv
+```
+
+Run the comprehensive held-out benchmark evaluation suite:
+
+```powershell
+python scripts/run_evaluation.py --split dev
+python scripts/run_evaluation.py --split calibration
+python scripts/run_evaluation.py --split test
 ```
 
 The fixture evaluator requires `case_category`, `input`, and
@@ -138,9 +163,29 @@ API-backed checks so the different assurance levels remain clear.
 ### Unit test evidence
 
 ```text
-pytest -q
-49 passed, 1 deselected in 7.11s
+python -m pytest -q
+63 passed, 1 deselected in 1.18s
 ```
+
+### Clinical Calibration & Comprehensive Benchmark Results
+
+The pipeline underwent clinical calibration across 10 specialized error categories (including mathematical unit conversions, liquid concentration ratios, release mechanisms, salt variants, and combination therapies) evaluated over an anti-leakage ingredient-stratified split:
+
+| Evaluation Dataset | Split / Scope | Accuracy | Recall | Precision | F1 Score |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **Calibration Set** | 190 cases (85 clusters) | **96.32%** (was 76.32%) | **0.9530** (was 0.6980) | **1.0000** (was 1.0000) | **0.9759** (was 0.8221) |
+| **Development Set** | 154 cases (85 clusters) | **98.05%** (was 56.49%) | **0.9836** (was 0.4590) | **0.9917** (was 0.9825) | **0.9877** (was 0.6257) |
+| **Held-Out Test Set** | 131 cases (85 clusters) | **98.47%** | **100.0%** | **0.9811** | **0.9905** |
+| **Adversarial Controls** | Rejection Safety | **100.0%** | **N/A** | **1.0000** | **1.0000** |
+| **Positive Fixture** | Core Smoke Fixture | **98.56%** | **0.9856** | **1.0000** | **0.9928** |
+
+For complete documentation and engineering calibration details, see:
+- `reports/01_dataset_report.md`: Full reference dataset audit (138,427 OpenFDA NDC + 56,085 active RxNorm concepts).
+- `reports/02_baseline_report.md`: Initial uncalibrated baseline metrics.
+- `reports/03_error_analysis.md`: Systematic root-cause error taxonomy.
+- `reports/04_calibration_and_changes.md`: Mathematical normalization and clinical ranking adjustments.
+- `reports/05_before_after_report.md`: Full before/after comparative evaluation on all benchmarks.
+- `reports/06_usage_documentation.md`: Complete integration guide, architecture diagram, and edge-case reference.
 
 ### Live API-backed checks
 

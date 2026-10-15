@@ -1,0 +1,95 @@
+{
+  "dataset": "rxnorm_adversarial.csv",
+  "total_cases": 12,
+  "true_positives": 8,
+  "false_positives": 0,
+  "false_negatives": 0,
+  "true_negatives": 4,
+  "unresolved_count": 4,
+  "api_errors": 0,
+  "precision": 1.0,
+  "recall": 1.0,
+  "f1_score": 1.0,
+  "accuracy": 1.0,
+  "false_positive_rate": 0.0,
+  "category_metrics": {
+    "ambiguous": {
+      "total": 1,
+      "tp": 0,
+      "fp": 0,
+      "fn": 0,
+      "tn": 1,
+      "unresolved": 1,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "accuracy": 1.0
+    },
+    "combination_product": {
+      "total": 2,
+      "tp": 2,
+      "fp": 0,
+      "fn": 0,
+      "tn": 0,
+      "unresolved": 0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "accuracy": 1.0
+    },
+    "salt_variant": {
+      "total": 2,
+      "tp": 2,
+      "fp": 0,
+      "fn": 0,
+      "tn": 0,
+      "unresolved": 0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "accuracy": 1.0
+    },
+    "similar_drug_name": {
+      "total": 3,
+      "tp": 2,
+      "fp": 0,
+      "fn": 0,
+      "tn": 1,
+      "unresolved": 1,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "accuracy": 1.0
+    },
+    "strength_difference": {
+      "total": 3,
+      "tp": 2,
+      "fp": 0,
+      "fn": 0,
+      "tn": 1,
+      "unresolved": 1,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "accuracy": 1.0
+    },
+    "unknown": {
+      "total": 1,
+      "tp": 0,
+      "fp": 0,
+      "fn": 0,
+      "tn": 1,
+      "unresolved": 1,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "accuracy": 1.0
+    }
+  },
+  "error_bucket_distribution": {
+    "None": 12
+  },
+  "failure_stage_distribution": {
+    "None": 12
+  }
+}

@@ -1,0 +1,147 @@
+{
+  "dataset": "held_out_test.csv",
+  "total_cases": 131,
+  "true_positives": 70,
+  "false_positives": 2,
+  "false_negatives": 34,
+  "true_negatives": 25,
+  "unresolved_count": 59,
+  "api_errors": 0,
+  "precision": 0.9722,
+  "recall": 0.6731,
+  "f1_score": 0.7955,
+  "accuracy": 0.7252,
+  "false_positive_rate": 0.0153,
+  "category_metrics": {
+    "combination_products": {
+      "total": 8,
+      "tp": 8,
+      "fp": 0,
+      "fn": 0,
+      "tn": 0,
+      "unresolved": 0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "accuracy": 1.0
+    },
+    "conflicting_or_nonexistent": {
+      "total": 13,
+      "tp": 0,
+      "fp": 0,
+      "fn": 0,
+      "tn": 13,
+      "unresolved": 13,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "accuracy": 1.0
+    },
+    "form_and_route_variations": {
+      "total": 26,
+      "tp": 19,
+      "fp": 0,
+      "fn": 7,
+      "tn": 0,
+      "unresolved": 7,
+      "precision": 1.0,
+      "recall": 0.7308,
+      "f1": 0.8445,
+      "accuracy": 0.7308
+    },
+    "insufficient_or_ambiguous": {
+      "total": 14,
+      "tp": 0,
+      "fp": 2,
+      "fn": 0,
+      "tn": 12,
+      "unresolved": 12,
+      "precision": 0.0,
+      "recall": 1.0,
+      "f1": 0.0,
+      "accuracy": 0.8571
+    },
+    "look_alike_sound_alike": {
+      "total": 8,
+      "tp": 7,
+      "fp": 0,
+      "fn": 1,
+      "tn": 0,
+      "unresolved": 1,
+      "precision": 1.0,
+      "recall": 0.875,
+      "f1": 0.9333,
+      "accuracy": 0.875
+    },
+    "salt_variants": {
+      "total": 6,
+      "tp": 6,
+      "fp": 0,
+      "fn": 0,
+      "tn": 0,
+      "unresolved": 0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "accuracy": 1.0
+    },
+    "standard_clean": {
+      "total": 28,
+      "tp": 20,
+      "fp": 0,
+      "fn": 8,
+      "tn": 0,
+      "unresolved": 8,
+      "precision": 1.0,
+      "recall": 0.7143,
+      "f1": 0.8333,
+      "accuracy": 0.7143
+    },
+    "strength_and_concentration": {
+      "total": 4,
+      "tp": 2,
+      "fp": 0,
+      "fn": 2,
+      "tn": 0,
+      "unresolved": 2,
+      "precision": 1.0,
+      "recall": 0.5,
+      "f1": 0.6667,
+      "accuracy": 0.5
+    },
+    "typos_and_formatting": {
+      "total": 16,
+      "tp": 8,
+      "fp": 0,
+      "fn": 8,
+      "tn": 0,
+      "unresolved": 8,
+      "precision": 1.0,
+      "recall": 0.5,
+      "f1": 0.6667,
+      "accuracy": 0.5
+    },
+    "unit_variations": {
+      "total": 8,
+      "tp": 0,
+      "fp": 0,
+      "fn": 8,
+      "tn": 0,
+      "unresolved": 8,
+      "precision": 1.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "accuracy": 0.0
+    }
+  },
+  "error_bucket_distribution": {
+    "None": 95,
+    "False Negative": 34,
+    "False Positive": 2
+  },
+  "failure_stage_distribution": {
+    "None": 95,
+    "parse_identity": 18,
+    "accept": 18
+  }
+}

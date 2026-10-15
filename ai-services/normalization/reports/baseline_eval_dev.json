@@ -1,0 +1,148 @@
+{
+  "dataset": "dev.csv",
+  "total_cases": 154,
+  "true_positives": 56,
+  "false_positives": 1,
+  "false_negatives": 66,
+  "true_negatives": 31,
+  "unresolved_count": 97,
+  "api_errors": 0,
+  "precision": 0.9825,
+  "recall": 0.459,
+  "f1_score": 0.6257,
+  "accuracy": 0.5649,
+  "false_positive_rate": 0.0065,
+  "category_metrics": {
+    "combination_products": {
+      "total": 6,
+      "tp": 4,
+      "fp": 0,
+      "fn": 2,
+      "tn": 0,
+      "unresolved": 2,
+      "precision": 1.0,
+      "recall": 0.6667,
+      "f1": 0.8,
+      "accuracy": 0.6667
+    },
+    "conflicting_or_nonexistent": {
+      "total": 18,
+      "tp": 0,
+      "fp": 0,
+      "fn": 0,
+      "tn": 18,
+      "unresolved": 18,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "accuracy": 1.0
+    },
+    "form_and_route_variations": {
+      "total": 4,
+      "tp": 2,
+      "fp": 0,
+      "fn": 2,
+      "tn": 0,
+      "unresolved": 2,
+      "precision": 1.0,
+      "recall": 0.5,
+      "f1": 0.6667,
+      "accuracy": 0.5
+    },
+    "insufficient_or_ambiguous": {
+      "total": 14,
+      "tp": 0,
+      "fp": 1,
+      "fn": 0,
+      "tn": 13,
+      "unresolved": 13,
+      "precision": 0.0,
+      "recall": 1.0,
+      "f1": 0.0,
+      "accuracy": 0.9286
+    },
+    "look_alike_sound_alike": {
+      "total": 9,
+      "tp": 6,
+      "fp": 0,
+      "fn": 3,
+      "tn": 0,
+      "unresolved": 3,
+      "precision": 1.0,
+      "recall": 0.6667,
+      "f1": 0.8,
+      "accuracy": 0.6667
+    },
+    "salt_variants": {
+      "total": 5,
+      "tp": 5,
+      "fp": 0,
+      "fn": 0,
+      "tn": 0,
+      "unresolved": 0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "accuracy": 1.0
+    },
+    "standard_clean": {
+      "total": 26,
+      "tp": 21,
+      "fp": 0,
+      "fn": 5,
+      "tn": 0,
+      "unresolved": 5,
+      "precision": 1.0,
+      "recall": 0.8077,
+      "f1": 0.8936,
+      "accuracy": 0.8077
+    },
+    "strength_and_concentration": {
+      "total": 12,
+      "tp": 5,
+      "fp": 0,
+      "fn": 7,
+      "tn": 0,
+      "unresolved": 7,
+      "precision": 1.0,
+      "recall": 0.4167,
+      "f1": 0.5883,
+      "accuracy": 0.4167
+    },
+    "typos_and_formatting": {
+      "total": 30,
+      "tp": 13,
+      "fp": 0,
+      "fn": 17,
+      "tn": 0,
+      "unresolved": 17,
+      "precision": 1.0,
+      "recall": 0.4333,
+      "f1": 0.6046,
+      "accuracy": 0.4333
+    },
+    "unit_variations": {
+      "total": 30,
+      "tp": 0,
+      "fp": 0,
+      "fn": 30,
+      "tn": 0,
+      "unresolved": 30,
+      "precision": 1.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "accuracy": 0.0
+    }
+  },
+  "error_bucket_distribution": {
+    "None": 87,
+    "False Negative": 66,
+    "False Positive": 1
+  },
+  "failure_stage_distribution": {
+    "None": 87,
+    "parse_identity": 49,
+    "accept": 17,
+    "gather_candidates": 1
+  }
+}

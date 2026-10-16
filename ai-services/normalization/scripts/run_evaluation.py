@@ -182,7 +182,7 @@ def evaluate_dataset(dataset_path: Path, debug: bool = False) -> tuple[dict, lis
                     failure_stage = "accept"
             elif actual_status == "error":
                 is_correct = False
-                error_bucket = "API/Infrastructure Error"
+                error_bucket = "False Negative"  # Under strict clinical audit, failed resolution due to error is a False Negative
                 failure_stage = "gather_candidates"
         else:  # expected unresolved
             if actual_status == "unresolved":

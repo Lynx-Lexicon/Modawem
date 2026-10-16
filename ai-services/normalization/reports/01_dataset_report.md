@@ -356,3 +356,14 @@ Based on the data profiling of 138,427 NDC products and 56,085 RxNorm concepts:
 1. **Expand Beyond Ingredient-Only Cases:** The existing fixture only tests IN names. We must sample extensively from the 17,610 SCDs and 9,691 SBDs.
 2. **Cover All 10 Clinical Edge-Case Categories:** Ensure statistically representative distributions for combination products, salt pairs, concentration ratios, and ambiguous/nonexistent strengths.
 3. **Anti-Leakage Splitting:** Group cases strictly by base active ingredient cluster (e.g. all metformin variants stay together) so no chemical family leaks across `calibration`, `dev`, and `held_out_test`.
+
+### 6.1 Final Benchmark Realization Profile (PR Revision Audit)
+Following the Connected Component (Union-Find) anti-leakage architecture:
+- **Total Benchmark Cases:** 457 unique cases (18 duplicate queries eliminated).
+- **Split Distribution:**
+  - `calibration.csv`: 173 cases (37.9%)
+  - `dev.csv`: 134 cases (29.3%)
+  - `held_out_test.csv`: 150 cases (32.8%)
+- **Anti-Leakage Guarantee:** Proven pairwise $\emptyset$ intersection across splits for active chemical entities and normalized queries.
+- **Category Coverage:** All 10 mandatory categories fully represented in all three splits.
+- **Reference Host:** Google Drive at `G:\My Drive\Modawem_RxNorm_Dataset` (`drug_reference.sqlite`, 53 MB, and `rxnorm_http_cache.sqlite`).

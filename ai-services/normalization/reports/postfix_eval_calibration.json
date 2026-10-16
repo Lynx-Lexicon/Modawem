@@ -1,69 +1,69 @@
 {
   "dataset": "calibration.csv",
-  "total_cases": 190,
-  "true_positives": 142,
+  "total_cases": 173,
+  "true_positives": 131,
   "false_positives": 0,
-  "false_negatives": 7,
-  "true_negatives": 41,
-  "unresolved_count": 48,
+  "false_negatives": 5,
+  "true_negatives": 37,
+  "unresolved_count": 42,
   "api_errors": 0,
   "precision": 1.0,
-  "recall": 0.953,
-  "f1_score": 0.9759,
-  "accuracy": 0.9632,
+  "recall": 0.9632,
+  "f1_score": 0.9813,
+  "accuracy": 0.9711,
   "false_positive_rate": 0.0,
   "category_metrics": {
     "combination_products": {
-      "total": 20,
-      "tp": 18,
+      "total": 4,
+      "tp": 2,
       "fp": 0,
       "fn": 2,
       "tn": 0,
       "unresolved": 2,
       "precision": 1.0,
-      "recall": 0.9,
-      "f1": 0.9474,
-      "accuracy": 0.9
+      "recall": 0.5,
+      "f1": 0.6667,
+      "accuracy": 0.5
     },
     "conflicting_or_nonexistent": {
-      "total": 19,
+      "total": 20,
       "tp": 0,
       "fp": 0,
       "fn": 0,
-      "tn": 19,
-      "unresolved": 19,
+      "tn": 20,
+      "unresolved": 20,
       "precision": 1.0,
       "recall": 1.0,
       "f1": 1.0,
       "accuracy": 1.0
     },
     "form_and_route_variations": {
-      "total": 8,
-      "tp": 6,
+      "total": 7,
+      "tp": 5,
       "fp": 0,
       "fn": 2,
       "tn": 0,
       "unresolved": 2,
       "precision": 1.0,
-      "recall": 0.75,
-      "f1": 0.8571,
-      "accuracy": 0.75
+      "recall": 0.7143,
+      "f1": 0.8333,
+      "accuracy": 0.7143
     },
     "insufficient_or_ambiguous": {
-      "total": 22,
+      "total": 17,
       "tp": 0,
       "fp": 0,
       "fn": 0,
-      "tn": 22,
-      "unresolved": 22,
+      "tn": 17,
+      "unresolved": 17,
       "precision": 1.0,
       "recall": 1.0,
       "f1": 1.0,
       "accuracy": 1.0
     },
     "look_alike_sound_alike": {
-      "total": 13,
-      "tp": 13,
+      "total": 6,
+      "tp": 6,
       "fp": 0,
       "fn": 0,
       "tn": 0,
@@ -74,8 +74,8 @@
       "accuracy": 1.0
     },
     "salt_variants": {
-      "total": 12,
-      "tp": 12,
+      "total": 3,
+      "tp": 3,
       "fp": 0,
       "fn": 0,
       "tn": 0,
@@ -86,20 +86,20 @@
       "accuracy": 1.0
     },
     "standard_clean": {
-      "total": 48,
-      "tp": 47,
+      "total": 49,
+      "tp": 48,
       "fp": 0,
       "fn": 1,
       "tn": 0,
       "unresolved": 1,
       "precision": 1.0,
-      "recall": 0.9792,
-      "f1": 0.9895,
-      "accuracy": 0.9792
+      "recall": 0.9796,
+      "f1": 0.9897,
+      "accuracy": 0.9796
     },
     "strength_and_concentration": {
-      "total": 10,
-      "tp": 10,
+      "total": 9,
+      "tp": 9,
       "fp": 0,
       "fn": 0,
       "tn": 0,
@@ -111,19 +111,19 @@
     },
     "typos_and_formatting": {
       "total": 32,
-      "tp": 30,
+      "tp": 32,
       "fp": 0,
-      "fn": 2,
+      "fn": 0,
       "tn": 0,
-      "unresolved": 2,
+      "unresolved": 0,
       "precision": 1.0,
-      "recall": 0.9375,
-      "f1": 0.9677,
-      "accuracy": 0.9375
+      "recall": 1.0,
+      "f1": 1.0,
+      "accuracy": 1.0
     },
     "unit_variations": {
-      "total": 6,
-      "tp": 6,
+      "total": 26,
+      "tp": 26,
       "fp": 0,
       "fn": 0,
       "tn": 0,
@@ -135,12 +135,11 @@
     }
   },
   "error_bucket_distribution": {
-    "None": 183,
-    "False Negative": 7
+    "None": 168,
+    "False Negative": 5
   },
   "failure_stage_distribution": {
-    "None": 183,
-    "accept": 5,
-    "gather_candidates": 2
+    "None": 168,
+    "accept": 5
   }
 }

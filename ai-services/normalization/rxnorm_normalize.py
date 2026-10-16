@@ -41,7 +41,7 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import asdict, dataclass, field as dataclass_field
 from pathlib import Path
 import sqlite3
-from threading import Lock
+from threading import Lock, Event
 from typing import Optional
 from urllib.parse import urlencode
 
@@ -69,7 +69,7 @@ INGREDIENT_TTY = {"IN", "PIN", "MIN"}
 
 _STRENGTH = re.compile(
     r"\b\d+(?:\.\d+)?\s*(?:mg|mcg|µg|ug|g|ml|iu|units?|%)"
-    r"(?:\s*/\s*\d*(?:\.\d+)?\s*(?:ml|mg|g|l))?\b",
+    r"(?:\s*/\s*\d*(?:\.\d+)?\s*(?:ml|l|actuat|puff))?\b",
     re.I,
 )
 _FORMS = re.compile(
@@ -168,6 +168,7 @@ class Identity:
     salts: tuple[str, ...] = ()
     combination: bool = False
     ingredient_tokens: tuple[str, ...] = ()
+    ingredient_strength_pairs: tuple[tuple[str, str], ...] = ()
 
     def has_modifier(self) -> bool:
         return bool(
@@ -176,10 +177,11 @@ class Identity:
             or self.routes
             or self.salts
             or self.combination
+            or self.ingredient_strength_pairs
         )
 
     def requests_product(self) -> bool:
-        return bool(self.strengths or self.forms)
+        return bool(self.strengths or self.forms or self.ingredient_strength_pairs)
 
 
 @dataclass
@@ -202,10 +204,12 @@ class RxNormUnavailable(Exception):
 def normalize_query(text: str) -> str:
     """Harmless lookup cleanup: case, punctuation, whitespace, unit separation, clinical abbreviations."""
     t = text.lower().strip()
+    # 0. Normalize '+' to ' / ' when used as combination separator
+    t = re.sub(r"\s*\+\s*", " / ", t)
     # 1. Normalize combination slashes to have spaces: " / "
     t = re.sub(r"\s*/\s*", " / ", t)
     # 2. Slashes in concentrations/strengths should have NO spaces: e.g. "100 mg / 5 ml" -> "100 mg/5 ml"
-    t = re.sub(r"\s*/\s*(?=\d*\s*(?:ml|mg|g|l)\b)", "/", t, flags=re.I)
+    t = re.sub(r"\s*/\s*(?=(?:\d+(?:\.\d+)?\s*)?(?:ml|l|actuat|puff)\b)", "/", t, flags=re.I)
     # 3. Separate attached numbers and units: e.g. 500mg -> 500 mg, 10mcg -> 10 mcg, 5ml -> 5 ml
     t = re.sub(r"(?<=\d)(mg|mcg|µg|ug|g|ml|l|meq|iu|units?|%)\b", r" \1", t, flags=re.I)
     # 4. Separate attached numbers and dosage forms: e.g. 10tab -> 10 tab
@@ -337,6 +341,121 @@ def are_strengths_compatible(
     return True
 
 
+def _extract_ingredient_strength_pairs(text: str) -> tuple[tuple[str, str], ...]:
+    """Extract structured (ingredient, strength) pairs from prescription or candidate text."""
+    t = normalize_query(text)
+    t_clean = re.sub(r"\[.*?\]", " ", t)
+    s_all = list(_STRENGTH.finditer(t_clean))
+    parts = re.split(
+        r"\s*(?:[/+]|\b(?:and|with)\b)\s*(?!\d*\s*(?:ml|l)\b)", t_clean, flags=re.I
+    )
+    pairs = []
+    if len(parts) > 1:
+        for p in parts:
+            s_matches = list(_STRENGTH.finditer(p))
+            stripped = _STRENGTH.sub(" ", p)
+            stripped = _FORMS.sub(" ", stripped)
+            stripped = _ROUTES.sub(" ", stripped)
+            stripped = _TRAILING_SALT.sub(" ", stripped)
+            tokens = [
+                w.lower()
+                for w in re.findall(r"[a-z0-9]+", stripped)
+                if w.lower() not in _FILLER
+            ]
+            ing = " ".join(tokens)
+            if s_matches and ing:
+                pairs.append((ing, _canon_strength(s_matches[0].group(0))))
+    if len(pairs) != len(s_all) and len(s_all) > 1:
+        clean_no_strength = _STRENGTH.sub(" ", t_clean)
+        clean_no_strength = _FORMS.sub(" ", clean_no_strength)
+        clean_no_strength = _ROUTES.sub(" ", clean_no_strength)
+        clean_no_strength = _TRAILING_SALT.sub(" ", clean_no_strength)
+        ing_parts = re.split(
+            r"\s*[/+]\s*|\s+(?:and|with)\s+", clean_no_strength, flags=re.I
+        )
+        clean_ings = []
+        for ip in ing_parts:
+            toks = [
+                w.lower()
+                for w in re.findall(r"[a-z0-9]+", ip)
+                if w.lower() not in _FILLER
+            ]
+            if toks:
+                clean_ings.append(" ".join(toks))
+        if len(clean_ings) == len(s_all):
+            pairs = list(
+                zip(clean_ings, [_canon_strength(sm.group(0)) for sm in s_all])
+            )
+        else:
+            seg_pairs = []
+            last_end = 0
+            for sm in s_all:
+                segment = t_clean[last_end : sm.start()]
+                last_end = sm.end()
+                stripped = _FORMS.sub(" ", segment)
+                stripped = _ROUTES.sub(" ", stripped)
+                stripped = _TRAILING_SALT.sub(" ", stripped)
+                toks = [
+                    w.lower()
+                    for w in re.findall(r"[a-z0-9]+", stripped)
+                    if w.lower() not in _FILLER
+                ]
+                if toks:
+                    seg_pairs.append((" ".join(toks), _canon_strength(sm.group(0))))
+            if len(seg_pairs) == len(s_all):
+                pairs = seg_pairs
+    elif len(pairs) == 0 and len(s_all) == 1:
+        stripped = _STRENGTH.sub(" ", t_clean)
+        stripped = _FORMS.sub(" ", stripped)
+        stripped = _ROUTES.sub(" ", stripped)
+        stripped = _TRAILING_SALT.sub(" ", stripped)
+        tokens = [
+            w.lower()
+            for w in re.findall(r"[a-z0-9]+", stripped)
+            if w.lower() not in _FILLER
+        ]
+        ing = " ".join(tokens)
+        if ing:
+            pairs.append((ing, _canon_strength(s_all[0].group(0))))
+    return tuple(pairs)
+
+
+def are_ingredient_strength_pairs_compatible(
+    query_pairs: tuple[tuple[str, str], ...],
+    cand_pairs: tuple[tuple[str, str], ...],
+) -> bool:
+    """True when each query (ingredient, strength) pair matches a compatible candidate pair."""
+    if not query_pairs:
+        return True
+    if not cand_pairs:
+        return False
+    if len(query_pairs) != len(cand_pairs):
+        return False
+
+    matched_cand_indices = set()
+    for q_ing, q_str in query_pairs:
+        found = False
+        q_words = set(q_ing.split())
+        for idx, (c_ing, c_str) in enumerate(cand_pairs):
+            if idx in matched_cand_indices:
+                continue
+            c_words = set(c_ing.split())
+            ing_match = bool(
+                (q_ing in c_ing)
+                or (c_ing in q_ing)
+                or (q_words & c_words)
+                or (fuzz.ratio(q_ing, c_ing) >= 80)
+            )
+            if ing_match:
+                if are_strengths_compatible((q_str,), (c_str,)):
+                    matched_cand_indices.add(idx)
+                    found = True
+                    break
+        if not found:
+            return False
+    return True
+
+
 def _canonicalize_query_strengths(text: str) -> str:
     """Replace liquid ratios (e.g. 250 mg/5 ml) and mcg with their RxNorm canonical forms (50 mg/ml, 0.05 mg)."""
     t = text
@@ -401,6 +520,7 @@ def parse_identity(text: str) -> Identity:
     stripped = stripped.replace("/", " ")
     leftover = [w for w in re.findall(r"[a-z0-9]+", stripped) if w not in _FILLER]
     combination = explicit_combination
+    ingredient_strength_pairs = _extract_ingredient_strength_pairs(t)
     return Identity(
         strengths,
         forms,
@@ -408,6 +528,7 @@ def parse_identity(text: str) -> Identity:
         salts,
         combination=combination,
         ingredient_tokens=tuple(leftover),
+        ingredient_strength_pairs=ingredient_strength_pairs,
     )
 
 
@@ -427,6 +548,14 @@ def _attribute_state(query: Identity, candidate_name: str) -> str:
         query.strengths, cand.strengths
     ):
         return "conflict"
+
+    # 1b. Structured ingredient-strength pairing (order-invariant matching & swapped strength rejection)
+    if query.ingredient_strength_pairs and cand.ingredient_strength_pairs:
+        if len(query.ingredient_strength_pairs) > 1 or len(cand.ingredient_strength_pairs) > 1:
+            if not are_ingredient_strength_pairs_compatible(
+                query.ingredient_strength_pairs, cand.ingredient_strength_pairs
+            ):
+                return "conflict"
 
     # 2. Forms: subset plus unrequested special forms
     if query.forms and not cand.forms:
@@ -551,65 +680,116 @@ def _calibrate_accept_threshold() -> float:
 ACCEPT_THRESHOLD = _calibrate_accept_threshold()
 
 
-# ---------------------------------------------------------------- API layer
-def _get(path: str, params: dict) -> dict:
-    if CACHE_DB_PATH and CACHE_DB_PATH.exists():
-        try:
-            param_str = urlencode(sorted((k, str(v)) for k, v in params.items()))
-            cache_key = f"{path}?{param_str}" if param_str else path
-            with sqlite3.connect(CACHE_DB_PATH) as conn:
-                cur = conn.cursor()
-                cur.execute(
-                    "SELECT response_json FROM http_cache WHERE cache_key = ?",
-                    (cache_key,),
-                )
-                row = cur.fetchone()
-                if row:
-                    payload = json.loads(row[0])
-                    if isinstance(payload, dict):
-                        return payload
-        except Exception:
-            pass
+_http_lock = Lock()
+_http_in_flight: dict[str, Event] = {}
+_http_last_error: dict[str, str] = {}
 
-    last: Exception | None = None
-    for attempt in range(RETRIES + 1):
-        try:
-            r = requests.get(f"{BASE_URL}{path}", params=params, timeout=TIMEOUT_SEC)
-            r.raise_for_status()
-            payload = r.json()
-            if not isinstance(payload, dict):
-                raise ValueError("response JSON must be an object")
+
+def _get(path: str, params: dict) -> dict:
+    param_str = urlencode(sorted((k, str(v)) for k, v in params.items()))
+    cache_key = f"{path}?{param_str}" if param_str else path
+
+    while True:
+        leader = False
+        with _http_lock:
             if CACHE_DB_PATH and CACHE_DB_PATH.exists():
                 try:
-                    param_str = urlencode(sorted((k, str(v)) for k, v in params.items()))
-                    cache_key = f"{path}?{param_str}" if param_str else path
                     with sqlite3.connect(CACHE_DB_PATH) as conn:
-                        conn.execute(
-                            "INSERT OR REPLACE INTO http_cache (cache_key, path, params, response_json) VALUES (?, ?, ?, ?)",
-                            (
-                                cache_key,
-                                path,
-                                json.dumps(params),
-                                json.dumps(payload, ensure_ascii=False),
-                            ),
+                        cur = conn.cursor()
+                        cur.execute(
+                            "SELECT response_json FROM http_cache WHERE cache_key = ?",
+                            (cache_key,),
                         )
-                        conn.commit()
+                        row = cur.fetchone()
+                        if row:
+                            payload = json.loads(row[0])
+                            if isinstance(payload, dict):
+                                return payload
                 except Exception:
                     pass
-            return payload
-        except requests.HTTPError as e:
-            last = e
-            status = getattr(getattr(e, "response", None), "status_code", None)
-            if status is None:
-                status = getattr(r, "status_code", None)
-            retryable = status == 429 or (status is not None and 500 <= status <= 599)
-            if not retryable:
-                break
-        except (requests.RequestException, ValueError) as e:
-            last = e
-        if attempt < RETRIES:
-            time.sleep(BACKOFF_BASE_SEC * (2**attempt))
-    raise RxNormUnavailable(f"{path}: {last or 'request failed'}")
+
+            if cache_key in _http_in_flight:
+                event = _http_in_flight[cache_key]
+            else:
+                event = Event()
+                _http_in_flight[cache_key] = event
+                leader = True
+
+        if not leader:
+            event.wait()
+            with _http_lock:
+                if CACHE_DB_PATH and CACHE_DB_PATH.exists():
+                    try:
+                        with sqlite3.connect(CACHE_DB_PATH) as conn:
+                            cur = conn.cursor()
+                            cur.execute(
+                                "SELECT response_json FROM http_cache WHERE cache_key = ?",
+                                (cache_key,),
+                            )
+                            row = cur.fetchone()
+                            if row:
+                                payload = json.loads(row[0])
+                                if isinstance(payload, dict):
+                                    return payload
+                    except Exception:
+                        pass
+                err_msg = _http_last_error.get(cache_key)
+                if err_msg is not None:
+                    raise RxNormUnavailable(f"{path}: {err_msg}")
+            continue
+
+        last: Exception | None = None
+        try:
+            for attempt in range(RETRIES + 1):
+                try:
+                    r = requests.get(
+                        f"{BASE_URL}{path}", params=params, timeout=TIMEOUT_SEC
+                    )
+                    r.raise_for_status()
+                    payload = r.json()
+                    if not isinstance(payload, dict):
+                        raise ValueError("response JSON must be an object")
+                    if CACHE_DB_PATH and CACHE_DB_PATH.exists():
+                        try:
+                            with sqlite3.connect(CACHE_DB_PATH) as conn:
+                                conn.execute(
+                                    "INSERT OR REPLACE INTO http_cache (cache_key, path, params, response_json) VALUES (?, ?, ?, ?)",
+                                    (
+                                        cache_key,
+                                        path,
+                                        json.dumps(params),
+                                        json.dumps(payload, ensure_ascii=False),
+                                    ),
+                                )
+                                conn.commit()
+                        except Exception:
+                            pass
+                    with _http_lock:
+                        _http_last_error.pop(cache_key, None)
+                    return payload
+                except requests.HTTPError as e:
+                    last = e
+                    status = getattr(getattr(e, "response", None), "status_code", None)
+                    if status is None:
+                        status = getattr(r, "status_code", None)
+                    retryable = status == 429 or (
+                        status is not None and 500 <= status <= 599
+                    )
+                    if not retryable:
+                        break
+                except (requests.RequestException, ValueError) as e:
+                    last = e
+                if attempt < RETRIES:
+                    time.sleep(BACKOFF_BASE_SEC * (2**attempt))
+            raise RxNormUnavailable(f"{path}: {last or 'request failed'}")
+        except Exception as e:
+            with _http_lock:
+                _http_last_error[cache_key] = str(e)
+            raise
+        finally:
+            with _http_lock:
+                _http_in_flight.pop(cache_key, None)
+                event.set()
 
 
 def _mapping(value, path: str, field_name: str) -> dict:
@@ -737,6 +917,10 @@ class RxNormNormalizer:
         self._cache_lock = Lock()
         self._props_lock = Lock()
         self._related_lock = Lock()
+        self._in_flight: dict[str, Event] = {}
+        self._props_in_flight: dict[str, Event] = {}
+        self._related_in_flight: dict[str, Event] = {}
+        self._last_error: dict[str, str] = {}
         self.diagnostics: list[str] = []
 
     @staticmethod
@@ -752,30 +936,68 @@ class RxNormNormalizer:
             print("[debug]", *a, file=sys.stderr)
 
     def _get_props(self, rxcui: str):
-        with self._props_lock:
-            cached = self._props_cache.get(rxcui)
-        if cached is not None:
-            return cached
-        value = _props(rxcui)
-        with self._props_lock:
-            cached = self._props_cache.get(rxcui)
-            if cached is None:
-                self._remember(self._props_cache, rxcui, value)
+        while True:
+            leader = False
+            with self._props_lock:
+                cached = self._props_cache.get(rxcui)
+                if cached is not None:
+                    return cached
+                if rxcui in self._props_in_flight:
+                    event = self._props_in_flight[rxcui]
+                else:
+                    event = Event()
+                    self._props_in_flight[rxcui] = event
+                    leader = True
+
+            if not leader:
+                event.wait()
+                with self._props_lock:
+                    cached = self._props_cache.get(rxcui)
+                    if cached is not None:
+                        return cached
+                continue
+
+            try:
+                value = _props(rxcui)
+                with self._props_lock:
+                    self._remember(self._props_cache, rxcui, value)
                 return value
-            return cached
+            finally:
+                with self._props_lock:
+                    self._props_in_flight.pop(rxcui, None)
+                    event.set()
 
     def _get_related(self, rxcui: str):
-        with self._related_lock:
-            cached = self._related_cache.get(rxcui)
-        if cached is not None:
-            return cached
-        value = _related(rxcui)
-        with self._related_lock:
-            cached = self._related_cache.get(rxcui)
-            if cached is None:
-                self._remember(self._related_cache, rxcui, value)
+        while True:
+            leader = False
+            with self._related_lock:
+                cached = self._related_cache.get(rxcui)
+                if cached is not None:
+                    return cached
+                if rxcui in self._related_in_flight:
+                    event = self._related_in_flight[rxcui]
+                else:
+                    event = Event()
+                    self._related_in_flight[rxcui] = event
+                    leader = True
+
+            if not leader:
+                event.wait()
+                with self._related_lock:
+                    cached = self._related_cache.get(rxcui)
+                    if cached is not None:
+                        return cached
+                continue
+
+            try:
+                value = _related(rxcui)
+                with self._related_lock:
+                    self._remember(self._related_cache, rxcui, value)
                 return value
-            return cached
+            finally:
+                with self._related_lock:
+                    self._related_in_flight.pop(rxcui, None)
+                    event.set()
 
     def gather_candidates(self, term: str) -> list[tuple[str, Optional[str]]]:
         """Exact, spelling, and approximate hits, deduplicated by rxcui (exact first)."""
@@ -1124,23 +1346,68 @@ class RxNormNormalizer:
                 name, None, None, 0.0, "unresolved", "Nothing left after cleaning"
             )
         key = term
-        with self._cache_lock:
-            cached = self._cache.get(key)
-        if cached is not None:
-            return cached
-        try:
-            cands = self.gather_candidates(term)
-            result = self.decide(name, term, cands)
-        except RxNormUnavailable as e:  # NOT cached, so caller can retry
-            return Result(
-                name, None, None, 0.0, "error", f"RxNorm API unavailable: {e}"
-            )
-        with self._cache_lock:
-            cached = self._cache.get(key)
-            if cached is None:
-                self._remember(self._cache, key, result)
+        while True:
+            leader = False
+            with self._cache_lock:
+                cached = self._cache.get(key)
+                if cached is not None:
+                    return cached
+                if key in self._in_flight:
+                    event = self._in_flight[key]
+                else:
+                    event = Event()
+                    self._in_flight[key] = event
+                    leader = True
+
+            if not leader:
+                event.wait()
+                with self._cache_lock:
+                    cached = self._cache.get(key)
+                    if cached is not None:
+                        return cached
+                    err_msg = self._last_error.get(key)
+                    if err_msg is not None:
+                        return Result(
+                            name,
+                            None,
+                            None,
+                            0.0,
+                            "error",
+                            f"RxNorm API unavailable: {err_msg}",
+                        )
+                continue
+
+            result: Optional[Result] = None
+            err_msg: Optional[str] = None
+            try:
+                cands = self.gather_candidates(term)
+                result = self.decide(name, term, cands)
                 return result
-            return cached
+            except RxNormUnavailable as e:
+                err_msg = str(e)
+                return Result(
+                    name, None, None, 0.0, "error", f"RxNorm API unavailable: {e}"
+                )
+            except Exception as e:
+                err_msg = str(e)
+                return Result(
+                    name,
+                    None,
+                    None,
+                    0.0,
+                    "error",
+                    f"Unexpected normalization error: {e}",
+                )
+            finally:
+                with self._cache_lock:
+                    if result is not None and result.status != "error":
+                        self._remember(self._cache, key, result)
+                    if err_msg is not None:
+                        self._last_error[key] = err_msg
+                    else:
+                        self._last_error.pop(key, None)
+                    self._in_flight.pop(key, None)
+                    event.set()
 
 
 # ---------------------------------------------------------------- Output / CLI

@@ -162,11 +162,11 @@ python -m rxnorm_service.server
 
 ## 5. Verification & Testing Commands
 
-To run the full suite of unit and regression tests:
+To run the full suite of unit, concurrency, and regression tests:
 ```powershell
 pytest -v ai-services/normalization/tests/ -m "not integration"
 ```
-*Result: 63/63 tests passing (100%).*
+*Result: 70/70 tests passing (100% in ~7.6s).*
 
 To run the official acceptance and adversarial evaluations:
 ```powershell
@@ -179,4 +179,4 @@ To run the reproducible evaluation runner across all benchmark splits:
 ```powershell
 python scripts/run_evaluation.py --dataset data/eval/held_out_test.csv
 ```
-*Result: 98.47% accuracy, 100.0% recall, 98.11% precision.*
+*Result: 98.67% accuracy, 98.33% recall, 100.00% precision (0 False Positives).*

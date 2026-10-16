@@ -1,13 +1,13 @@
 case_id,raw_input,category,base_ingredient_cluster,expected_status,actual_status,expected_rxcui,actual_rxcui,matched_name,score,is_correct,error_bucket,failure_stage,rejection_or_error_reason,expected_reason,rationale,latency_ms
-,notarealmedicine,unknown,,unresolved,unresolved,,,,0.0,True,None,None,RxNorm returned no candidates for this name,,,2.21
-,metoprolol tartrate or succinate,ambiguous,,unresolved,unresolved,,,,1.0,True,None,None,Top candidate conflicts with requested medication attributes,,,2.58
-,metforman,similar_drug_name,,unresolved,unresolved,,,,0.8888888888888888,True,None,None,No sufficiently reliable match,,,4.5
-,metoprolol tartrate,salt_variant,,resolved,resolved,203191,203191,metoprolol tartrate,1.0,True,None,None,,,,4.48
-,metoprolol succinate,salt_variant,,resolved,resolved,221124,221124,metoprolol succinate,1.0,True,None,None,,,,4.93
-,amoxicillin clavulanate,combination_product,,resolved,resolved,19711,19711,amoxicillin / clavulanate,1.0,True,None,None,,,,5.08
-,amoxicillin 500 mg tablet,strength_difference,,resolved,resolved,308192,308192,amoxicillin 500 MG Oral Tablet,1.0,True,None,None,,,,2.56
-,amoxicillin 250 mg tablet,strength_difference,,resolved,resolved,598025,598025,amoxicillin 250 MG Chewable Tablet,1.0,True,None,None,,,,4.2
-,acetaminophen 0.5 mg tablet,strength_difference,,unresolved,unresolved,,,,0.92,True,None,None,Top candidate conflicts with requested medication attributes,,,6.26
-,acetaminophen 500 mg tablet,similar_drug_name,,resolved,resolved,198440,198440,acetaminophen 500 MG Oral Tablet,1.0,True,None,None,,,,2.49
-,amoxicillin / clavulanate,combination_product,,resolved,resolved,19711,19711,amoxicillin / clavulanate,1.0,True,None,None,,,,3.1
-,metformin 500 mg tablet,similar_drug_name,,resolved,resolved,861007,861007,metformin hydrochloride 500 MG Oral Tablet,1.0,True,None,None,,,,6.89
+,notarealmedicine,unknown,,unresolved,unresolved,,,,0.0,True,None,None,RxNorm returned no candidates for this name,,,1.17
+,metoprolol tartrate or succinate,ambiguous,,unresolved,unresolved,,,,1.0,True,None,None,Top candidate conflicts with requested medication attributes,,,1.33
+,metforman,similar_drug_name,,unresolved,unresolved,,,,0.8888888888888888,True,None,None,No sufficiently reliable match,,,2.18
+,metoprolol tartrate,salt_variant,,resolved,resolved,203191,203191,metoprolol tartrate,1.0,True,None,None,,,,2.47
+,metoprolol succinate,salt_variant,,resolved,resolved,221124,221124,metoprolol succinate,1.0,True,None,None,,,,2.13
+,amoxicillin clavulanate,combination_product,,resolved,resolved,19711,19711,amoxicillin / clavulanate,1.0,True,None,None,,,,2.77
+,amoxicillin 500 mg tablet,strength_difference,,resolved,resolved,308192,308192,amoxicillin 500 MG Oral Tablet,1.0,True,None,None,,,,1.91
+,amoxicillin 250 mg tablet,strength_difference,,resolved,resolved,598025,598025,amoxicillin 250 MG Chewable Tablet,1.0,True,None,None,,,,2.66
+,acetaminophen 0.5 mg tablet,strength_difference,,unresolved,unresolved,,,,0.92,True,None,None,Top candidate conflicts with requested medication attributes,,,4.58
+,acetaminophen 500 mg tablet,similar_drug_name,,resolved,resolved,198440,198440,acetaminophen 500 MG Oral Tablet,1.0,True,None,None,,,,2.0
+,amoxicillin / clavulanate,combination_product,,resolved,resolved,19711,19711,amoxicillin / clavulanate,1.0,True,None,None,,,,2.23
+,metformin 500 mg tablet,similar_drug_name,,resolved,unresolved,861007,,,1.0,False,False Negative,accept,Ambiguous: close candidates 'canagliflozin 150 MG / metformin hydrochloride 500 MG Oral Tablet' and 'canagliflozin 50 MG / metformin hydrochloride 500 MG Oral Tablet',,,6.51

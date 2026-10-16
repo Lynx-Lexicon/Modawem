@@ -183,9 +183,10 @@ For complete documentation and engineering calibration details, see:
 - `reports/01_dataset_report.md`: Full reference dataset audit (138,427 OpenFDA NDC + 56,085 active RxNorm concepts).
 - `reports/02_baseline_report.md`: Initial uncalibrated baseline metrics.
 - `reports/03_error_analysis.md`: Systematic root-cause error taxonomy.
-- `reports/04_calibration_and_changes.md`: Mathematical normalization and clinical ranking adjustments.
+- `reports/04_calibration_and_changes.md`: Mathematical normalization, clinical ranking adjustments, and concurrency architecture.
 - `reports/05_before_after_report.md`: Full before/after comparative evaluation on all benchmarks.
 - `reports/06_usage_documentation.md`: Complete integration guide, architecture diagram, and edge-case reference.
+- `reports/07_pr_revision_summary.md`: Comprehensive PR revision audit report covering label consistency, zero-leakage splits, combination structured pairing, and single-flight concurrency.
 
 ### Live API-backed checks
 

@@ -1,16 +1,16 @@
 {
   "dataset": "rxnorm_adversarial.csv",
   "total_cases": 12,
-  "true_positives": 8,
+  "true_positives": 7,
   "false_positives": 0,
-  "false_negatives": 0,
+  "false_negatives": 1,
   "true_negatives": 4,
-  "unresolved_count": 4,
+  "unresolved_count": 5,
   "api_errors": 0,
   "precision": 1.0,
-  "recall": 1.0,
-  "f1_score": 1.0,
-  "accuracy": 1.0,
+  "recall": 0.875,
+  "f1_score": 0.9333,
+  "accuracy": 0.9167,
   "false_positive_rate": 0.0,
   "category_metrics": {
     "ambiguous": {
@@ -51,15 +51,15 @@
     },
     "similar_drug_name": {
       "total": 3,
-      "tp": 2,
+      "tp": 1,
       "fp": 0,
-      "fn": 0,
+      "fn": 1,
       "tn": 1,
-      "unresolved": 1,
+      "unresolved": 2,
       "precision": 1.0,
-      "recall": 1.0,
-      "f1": 1.0,
-      "accuracy": 1.0
+      "recall": 0.5,
+      "f1": 0.6667,
+      "accuracy": 0.6667
     },
     "strength_difference": {
       "total": 3,
@@ -87,9 +87,11 @@
     }
   },
   "error_bucket_distribution": {
-    "None": 12
+    "None": 11,
+    "False Negative": 1
   },
   "failure_stage_distribution": {
-    "None": 12
+    "None": 11,
+    "accept": 1
   }
 }

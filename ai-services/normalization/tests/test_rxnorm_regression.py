@@ -11,8 +11,12 @@ Validates:
 7. Full public API contract preservation.
 """
 
+import concurrent.futures
+import csv
 from dataclasses import asdict
 from pathlib import Path
+import time
+from unittest.mock import patch
 import pytest
 
 import rxnorm_normalize as rx
@@ -175,3 +179,188 @@ def test_public_api_signatures_and_result_schema():
     assert isinstance(res.score, float)
     assert isinstance(res.closest, list)
     assert res.status in {"resolved", "unresolved", "error"}
+
+
+# -----------------------------------------------------------------------------
+# 7. Multi-Ingredient Combination Structured Pairing & Swapped Strength Rejection
+# -----------------------------------------------------------------------------
+def test_combination_structured_pairing_reversed_order():
+    """Validates that reversed ingredient order resolves to the exact same concept."""
+    norm = rx.RxNormNormalizer()
+    r1 = norm.normalize("amlodipine 5 mg + atorvastatin 10 mg")
+    r2 = norm.normalize("atorvastatin 10 mg + amlodipine 5 mg")
+    assert r1.status == "resolved"
+    assert r2.status == "resolved"
+    assert r1.rxcui == "597977"
+    assert r2.rxcui == "597977"
+    assert "amlodipine 5 MG / atorvastatin 10 MG Oral Tablet" in r1.matched_name
+    assert "amlodipine 5 MG / atorvastatin 10 MG Oral Tablet" in r2.matched_name
+
+
+def test_combination_swapped_strength_rejection():
+    """Validates that swapped strengths (amlodipine 10 / atorvastatin 5) reject candidate 597977 (amlodipine 5 / atorvastatin 10)."""
+    norm = rx.RxNormNormalizer()
+    res = norm.normalize("amlodipine 10 mg + atorvastatin 5 mg")
+    assert res.status == "unresolved"
+    assert res.rxcui != "597977"
+
+
+def test_combination_mismatched_single_strength_rejection():
+    """Validates that if one component's strength differs, candidate is strictly rejected."""
+    norm = rx.RxNormNormalizer()
+    res = norm.normalize("amlodipine 5 mg + atorvastatin 50 mg")
+    assert res.status == "unresolved"
+    assert res.rxcui is None
+
+
+# -----------------------------------------------------------------------------
+# 8. Single-Flight Concurrency & Cache Stampede Prevention
+# -----------------------------------------------------------------------------
+def test_same_key_single_flight_coordination():
+    """Validates that concurrent requests for the exact same uncached key execute the underlying call exactly once."""
+    call_count = 0
+
+    def mock_gather(term):
+        nonlocal call_count
+        call_count += 1
+        time.sleep(0.08)
+        return [("12345", None)]
+
+    norm = rx.RxNormNormalizer()
+    norm._cache.clear()
+
+    with patch.object(norm, "gather_candidates", side_effect=mock_gather):
+        with patch.object(
+            norm, "_get_props", return_value=("lisinopril 10 MG Oral Tablet", "SCD")
+        ):
+            with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
+                futures = [
+                    executor.submit(norm.normalize, "lisinopril 10 mg oral tablet")
+                    for _ in range(8)
+                ]
+                results = [f.result() for f in futures]
+
+    assert call_count == 1, f"Expected exactly 1 call under single-flight, got {call_count}"
+    assert all(r.status == "resolved" for r in results)
+    assert all(r.rxcui == "12345" for r in results)
+    assert all(r is results[0] for r in results)
+
+
+def test_distinct_key_parallelism():
+    """Validates that concurrent requests for distinct keys execute in parallel without serialization."""
+    def slow_gather(term):
+        time.sleep(0.1)
+        return [("12345", None)]
+
+    norm = rx.RxNormNormalizer()
+    norm._cache.clear()
+
+    keys = [
+        "aspirin 100 mg oral tablet",
+        "aspirin 100 mg tablet",
+        "aspirin 100 mg tab",
+        "aspirin 100mg tablet",
+    ]
+
+    with patch.object(norm, "gather_candidates", side_effect=slow_gather):
+        with patch.object(
+            norm, "_get_props", return_value=("aspirin 100 MG Oral Tablet", "SCD")
+        ):
+            t0 = time.time()
+            with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
+                futures = [executor.submit(norm.normalize, k) for k in keys]
+                results = [f.result() for f in futures]
+            elapsed = time.time() - t0
+
+    assert elapsed < 0.25, f"Expected parallel wall time < 0.25s, got {elapsed:.2f}s"
+    assert all(r.status == "resolved" for r in results)
+
+
+def test_single_flight_exception_recovery_and_unblocking():
+    """Validates that leader failure cleanly unblocks follower threads and surfaces error without deadlock or cache poisoning."""
+    should_fail = True
+
+    def flaky_gather(term):
+        time.sleep(0.05)
+        if should_fail:
+            raise rx.RxNormUnavailable("Upstream timeout")
+        return [("12345", None)]
+
+    norm = rx.RxNormNormalizer()
+    norm._cache.clear()
+
+    with patch.object(norm, "gather_candidates", side_effect=flaky_gather):
+        with patch.object(
+            norm, "_get_props", return_value=("aspirin 100 MG Oral Tablet", "SCD")
+        ):
+            with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
+                futures = [
+                    executor.submit(norm.normalize, "aspirin 100 mg oral tablet")
+                    for _ in range(4)
+                ]
+                results = [f.result() for f in futures]
+
+            assert all(r.status == "error" for r in results)
+            assert all("Upstream timeout" in (r.reason or "") for r in results)
+            assert "aspirin 100 mg oral tablet" not in norm._in_flight
+            assert "aspirin 100 mg oral tablet" not in norm._cache
+
+            should_fail = False
+            retry_res = norm.normalize("aspirin 100 mg oral tablet")
+            assert retry_res.status == "resolved"
+            assert retry_res.rxcui == "12345"
+
+
+# -----------------------------------------------------------------------------
+# 9. Evaluation Split Isolation & Label Consistency Audit
+# -----------------------------------------------------------------------------
+def test_evaluation_splits_zero_leakage_and_label_consistency():
+    """Validates that evaluation datasets have 0% chemical overlap, 0% query duplicate overlap, and 0 label contradictions."""
+    eval_dir = Path("d:/modawem/data/eval")
+    calib_file = eval_dir / "calibration.csv"
+    dev_file = eval_dir / "dev.csv"
+    test_file = eval_dir / "held_out_test.csv"
+
+    if not (calib_file.exists() and dev_file.exists() and test_file.exists()):
+        pytest.skip("Evaluation CSV datasets not present on disk")
+
+    def load_split(path):
+        with open(path, "r", encoding="utf-8") as f:
+            return list(csv.DictReader(f))
+
+    calib = load_split(calib_file)
+    dev = load_split(dev_file)
+    test = load_split(test_file)
+
+    def extract_ingredients(cases):
+        ings = set()
+        for c in cases:
+            for p in c["base_ingredient_cluster"].split("-"):
+                if p.strip():
+                    ings.add(p.strip().lower())
+        return ings
+
+    c_ings = extract_ingredients(calib)
+    d_ings = extract_ingredients(dev)
+    t_ings = extract_ingredients(test)
+
+    # 1. Zero active ingredient leakage
+    assert not (c_ings & d_ings), f"Chemical overlap between calib and dev: {c_ings & d_ings}"
+    assert not (c_ings & t_ings), f"Chemical overlap between calib and test: {c_ings & t_ings}"
+    assert not (d_ings & t_ings), f"Chemical overlap between dev and test: {d_ings & t_ings}"
+
+    # 2. Zero normalized query leakage
+    c_q = {rx.normalize_query(c["raw_input"]) for c in calib}
+    d_q = {rx.normalize_query(c["raw_input"]) for c in dev}
+    t_q = {rx.normalize_query(c["raw_input"]) for c in test}
+
+    assert not (c_q & d_q), f"Query duplicate overlap between calib and dev: {c_q & d_q}"
+    assert not (c_q & t_q), f"Query duplicate overlap between calib and test: {c_q & t_q}"
+    assert not (d_q & t_q), f"Query duplicate overlap between dev and test: {d_q & t_q}"
+
+    # 3. Label Consistency: metformin 500 mg tablet resolves to 861007
+    norm = rx.RxNormNormalizer()
+    res = norm.normalize("metformin 500 mg tablet")
+    assert res.status == "resolved"
+    assert res.rxcui == "861007"
+    assert "metformin hydrochloride 500 MG Oral Tablet" in res.matched_name

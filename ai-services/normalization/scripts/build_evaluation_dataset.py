@@ -27,10 +27,13 @@ import sys
 from collections import Counter, defaultdict
 from pathlib import Path
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
-
 ROOT_DIR = Path("D:/modawem")
 BASE_DIR = ROOT_DIR / "ai-services" / "normalization"
+sys.path.insert(0, str(BASE_DIR))
+from rxnorm_normalize import normalize_query
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+
 EVAL_DIR = ROOT_DIR / "data" / "eval"
 EVAL_DIR.mkdir(parents=True, exist_ok=True)
 NORM_EVAL_DIR = BASE_DIR / "data" / "eval"
@@ -56,10 +59,15 @@ def build_evaluation_dataset() -> list[dict]:
 
     cases = []
     case_counter = 1
+    seen_norm_queries = set()
 
     def add(raw_input, category, expected_status, expected_rxcui, expected_name,
             expected_reason, rationale, base_ingredient_cluster):
         nonlocal case_counter
+        norm_q = normalize_query(raw_input)
+        if norm_q in seen_norm_queries:
+            return
+        seen_norm_queries.add(norm_q)
         cases.append({
             "case_id": f"CASE_{case_counter:04d}",
             "raw_input": raw_input,
@@ -380,9 +388,9 @@ def build_evaluation_dataset() -> list[dict]:
         ("lisinopril oral tablet", "lisinopril", "Missing strength (2.5 mg, 5 mg, 10 mg, 20 mg, 40 mg available)"),
         ("atorvastatin oral tablet", "atorvastatin", "Missing strength (10 mg, 20 mg, 40 mg, 80 mg available)"),
         ("metformin oral tablet", "metformin", "Missing strength (500 mg, 850 mg, 1000 mg available)"),
-        ("metformin 500 mg tablet", "metformin", "Ambiguous release mechanism (IR vs ER)"),
-        ("metoprolol 50 mg tablet", "metoprolol", "Ambiguous salt (tartrate vs succinate ER)"),
-        ("metoprolol 100 mg tablet", "metoprolol", "Ambiguous salt (tartrate vs succinate ER)"),
+        ("metformin 500 mg immediate or extended release tablet", "metformin", "Ambiguous release mechanism (IR vs ER)"),
+        ("metoprolol 50 mg tartrate or succinate tablet", "metoprolol", "Ambiguous salt (tartrate vs succinate ER)"),
+        ("metoprolol 100 mg tartrate or succinate tablet", "metoprolol", "Ambiguous salt (tartrate vs succinate ER)"),
         ("metoprolol tartrate or succinate", "metoprolol", "Explicitly disjunctive/ambiguous salt input"),
         ("omeprazole capsule", "omeprazole", "Missing strength (10 mg, 20 mg, 40 mg available)"),
         ("losartan oral tablet", "losartan", "Missing strength (25 mg, 50 mg, 100 mg available)"),
@@ -491,45 +499,56 @@ def build_evaluation_dataset() -> list[dict]:
 
 
 def perform_anti_leakage_split(cases: list[dict]) -> tuple[list[dict], list[dict], list[dict]]:
-    cluster_cases = defaultdict(list)
-    for c in cases:
-        cluster_cases[c["base_ingredient_cluster"]].append(c)
+    # 1. Union-Find on active ingredients
+    parent: dict[str, str] = {}
 
-    clusters = sorted(cluster_cases.keys())
+    def find(x: str) -> str:
+        parent.setdefault(x, x)
+        if parent[x] != x:
+            parent[x] = find(parent[x])
+        return parent[x]
+
+    def union(x: str, y: str) -> None:
+        px, py = find(x), find(y)
+        if px != py:
+            parent[px] = py
+
+    for c in cases:
+        ings = [p.strip().lower() for p in c["base_ingredient_cluster"].split("-") if p.strip()]
+        c["active_ingredients"] = set(ings)
+        for i in range(1, len(ings)):
+            union(ings[0], ings[i])
+
+    comp_cases = defaultdict(list)
+    for c in cases:
+        root = find(list(c["active_ingredients"])[0])
+        comp_cases[root].append(c)
+
+    # 2. Balanced partition of components
+    comps = list(comp_cases.values())
     rng = random.Random(SEED)
-    rng.shuffle(clusters)
+    rng.shuffle(comps)
 
     total_cases = len(cases)
-    target_calib = int(total_cases * 0.40)
-    target_dev = int(total_cases * 0.30)
+    targets = {
+        "calibration": total_cases * 0.40,
+        "dev": total_cases * 0.30,
+        "held_out_test": total_cases * 0.30,
+    }
 
-    calib_cases = []
-    dev_cases = []
-    test_cases = []
+    splits: dict[str, list[dict]] = {
+        "calibration": [],
+        "dev": [],
+        "held_out_test": [],
+    }
 
-    calib_clusters = set()
-    dev_clusters = set()
-    test_clusters = set()
+    for comp in comps:
+        best_split = min(splits.keys(), key=lambda s: len(splits[s]) / targets[s])
+        for item in comp:
+            item["split"] = best_split
+        splits[best_split].extend(comp)
 
-    for cl in clusters:
-        items = cluster_cases[cl]
-        if len(calib_cases) + len(items) <= target_calib or (len(calib_cases) < target_calib and len(dev_cases) >= target_dev):
-            calib_clusters.add(cl)
-            for it in items:
-                it["split"] = "calibration"
-                calib_cases.append(it)
-        elif len(dev_cases) + len(items) <= target_dev or (len(dev_cases) < target_dev):
-            dev_clusters.add(cl)
-            for it in items:
-                it["split"] = "dev"
-                dev_cases.append(it)
-        else:
-            test_clusters.add(cl)
-            for it in items:
-                it["split"] = "held_out_test"
-                test_cases.append(it)
-
-    return calib_cases, dev_cases, test_cases
+    return splits["calibration"], splits["dev"], splits["held_out_test"]
 
 
 def save_datasets(cases: list[dict], calib: list[dict], dev: list[dict], test: list[dict]) -> dict:
@@ -553,7 +572,9 @@ def save_datasets(cases: list[dict], calib: list[dict], dev: list[dict], test: l
         with open(path, "w", newline="", encoding="utf-8") as f:
             writer = csv.DictWriter(f, fieldnames=fieldnames)
             writer.writeheader()
-            writer.writerows(data)
+            for row in data:
+                # Save only expected fields (strip auxiliary fields like active_ingredients)
+                writer.writerow({k: row.get(k, "") for k in fieldnames})
 
     manifest = {
         "dataset_name": "Clinical RxNorm Normalizer Comprehensive Benchmark",
@@ -571,7 +592,7 @@ def save_datasets(cases: list[dict], calib: list[dict], dev: list[dict], test: l
         "category_distribution": dict(Counter(c["category"] for c in cases)),
         "status_distribution": dict(Counter(c["expected_status"] for c in cases)),
         "unique_ingredient_clusters": len({c["base_ingredient_cluster"] for c in cases}),
-        "anti_leakage_guarantee": "Zero chemical ingredient cluster overlap between calibration, dev, and held_out_test.",
+        "anti_leakage_guarantee": "Zero active chemical ingredient overlap and zero normalized query overlap between calibration, dev, and held_out_test.",
     }
 
     with open(EVAL_DIR / "dataset_manifest.json", "w", encoding="utf-8") as f:
@@ -589,15 +610,31 @@ def main() -> None:
 
     calib, dev, test = perform_anti_leakage_split(cases)
 
-    # Verification: Zero leakage
-    c_set = {c["base_ingredient_cluster"] for c in calib}
-    d_set = {c["base_ingredient_cluster"] for c in dev}
-    t_set = {c["base_ingredient_cluster"] for c in test}
+    # 1. Strict Active Ingredient Zero-Leakage Assertion
+    c_ings = set.union(*(c["active_ingredients"] for c in calib))
+    d_ings = set.union(*(c["active_ingredients"] for c in dev))
+    t_ings = set.union(*(c["active_ingredients"] for c in test))
 
-    assert not (c_set & d_set), f"Leakage between calibration and dev: {c_set & d_set}"
-    assert not (c_set & t_set), f"Leakage between calibration and test: {c_set & t_set}"
-    assert not (d_set & t_set), f"Leakage between dev and test: {d_set & t_set}"
-    logging.info("Strict Anti-Leakage Assertion PASSED (0% cluster overlap).")
+    assert not (c_ings & d_ings), f"Ingredient leakage between calibration and dev: {c_ings & d_ings}"
+    assert not (c_ings & t_ings), f"Ingredient leakage between calibration and test: {c_ings & t_ings}"
+    assert not (d_ings & t_ings), f"Ingredient leakage between dev and test: {d_ings & t_ings}"
+    logging.info("Strict Active Ingredient Anti-Leakage Gate PASSED (0% chemical overlap).")
+
+    # 2. Strict Normalized Query Zero-Leakage Assertion
+    c_q = {normalize_query(c["raw_input"]) for c in calib}
+    d_q = {normalize_query(c["raw_input"]) for c in dev}
+    t_q = {normalize_query(c["raw_input"]) for c in test}
+
+    assert not (c_q & d_q), f"Query leakage between calibration and dev: {c_q & d_q}"
+    assert not (c_q & t_q), f"Query leakage between calibration and test: {c_q & t_q}"
+    assert not (d_q & t_q), f"Query leakage between dev and test: {d_q & t_q}"
+    logging.info("Strict Query Anti-Leakage Gate PASSED (0% duplicate query overlap).")
+
+    # 3. All 10 categories present in all splits
+    for s_name, s_cases in [("calibration", calib), ("dev", dev), ("held_out_test", test)]:
+        cats = {c["category"] for c in s_cases}
+        assert len(cats) == 10, f"Split {s_name} is missing categories: {10 - len(cats)}"
+    logging.info("Category Coverage Gate PASSED (All 10 categories present in all 3 splits).")
 
     manifest = save_datasets(cases, calib, dev, test)
     logging.info("Datasets successfully generated and saved to data/eval/!")

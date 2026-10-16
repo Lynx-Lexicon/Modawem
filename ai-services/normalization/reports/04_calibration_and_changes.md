@@ -176,4 +176,21 @@ All modifications strictly adhered to the Non-Negotiable Guardrails:
 Both official regression fixtures were tested and passed with 100% fidelity:
 - `tests/rxnorm_adversarial.csv`: **100.0% pass rate** (12/12 cases passed; 0 false positives, 0 control failures).
 - `tests/rxnorm_fixture.csv`: **98.56% exact resolution** (206/209 exact matches; correct: 100.0%, misspelled: 97.1%, both exceeding targets).
-- Full `pytest` unit test suite: **49/49 passed** in 0.38 seconds.
+- Full `pytest` test suite: **70/70 passed** (49 unit + 21 regression/concurrency tests).
+
+---
+
+## 5. PR Revision Architectural Enhancements (Phase 5 Extension)
+
+1. **Structured Ingredient-Strength Pairing (`Identity.ingredient_strength_pairs`):**
+   - Multi-ingredient formulations bind ingredients directly to their stated strengths.
+   - Preserves order-invariance (`amlodipine 5 / atorvastatin 10 == atorvastatin 10 / amlodipine 5`).
+   - Strictly rejects swapped strengths (`amlodipine 10 / atorvastatin 5` vs candidate `597977`) and component mismatches.
+2. **Thread-Safe Single-Flight Coordination:**
+   - Coalesces in-flight queries per unique key via `_in_flight: dict[str, Event]`.
+   - Distinct keys run concurrently in parallel.
+   - Upstream exceptions unblock waiters cleanly without hanging or cache poisoning.
+3. **Union-Find Anti-Leakage Partitioning:**
+   - Active ingredients grouped into connected components, guaranteeing 0% chemical overlap across `calibration`, `dev`, and `held_out_test`.
+4. **Label Consistency:**
+   - Standard unmodified tablets map to immediate-release SCD concepts, establishing 0 contradictions with `rxnorm_adversarial.csv`.

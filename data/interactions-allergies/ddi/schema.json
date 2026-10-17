@@ -1,0 +1,151 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://modawem.internal/schemas/clinical-data/ddi/v1.json",
+  "title": "ModawemDrugDrugInteractionRecord",
+  "description": "Schema definition for Modawem drug-drug interaction (DDI) dataset records.",
+  "version": "1.0.0",
+  "type": "object",
+  "required": [
+    "record_id",
+    "interaction_group_id",
+    "ingredient_a_name",
+    "ingredient_a_id",
+    "ingredient_a_id_system",
+    "ingredient_b_name",
+    "ingredient_b_id",
+    "ingredient_b_id_system",
+    "interaction_type",
+    "severity",
+    "clinical_effect",
+    "management_guidance",
+    "source_id",
+    "source_record_id",
+    "source_version",
+    "source_url",
+    "retrieved_at",
+    "validation_status",
+    "notes"
+  ],
+  "properties": {
+    "record_id": {
+      "type": "string",
+      "description": "Unique identifier for this specific source record. Must not be empty.",
+      "minLength": 1
+    },
+    "interaction_group_id": {
+      "type": "string",
+      "description": "Canonical group identifier representing the active ingredient pair across multiple sources.",
+      "minLength": 1
+    },
+    "ingredient_a_name": {
+      "type": "string",
+      "description": "Standardized active ingredient name for entity A.",
+      "minLength": 1
+    },
+    "ingredient_a_id": {
+      "type": "string",
+      "description": "Identifier for ingredient A within ingredient_a_id_system.",
+      "minLength": 1
+    },
+    "ingredient_a_id_system": {
+      "type": "string",
+      "description": "Coding system for ingredient A (e.g., RxNorm, UNII, CAS, internal).",
+      "minLength": 1
+    },
+    "ingredient_b_name": {
+      "type": "string",
+      "description": "Standardized active ingredient name for entity B.",
+      "minLength": 1
+    },
+    "ingredient_b_id": {
+      "type": "string",
+      "description": "Identifier for ingredient B within ingredient_b_id_system.",
+      "minLength": 1
+    },
+    "ingredient_b_id_system": {
+      "type": "string",
+      "description": "Coding system for ingredient B (e.g., RxNorm, UNII, CAS, internal).",
+      "minLength": 1
+    },
+    "interaction_type": {
+      "type": "string",
+      "description": "Clinical or pharmacological interaction mechanism (e.g. pharmacokinetic, pharmacodynamic, additive, antagonism, unspecified).",
+      "minLength": 1
+    },
+    "severity": {
+      "type": "string",
+      "description": "Source-specific severity rating (e.g., Major, Moderate, Minor, Contraindicated, Severe). Must preserve source classification.",
+      "minLength": 1
+    },
+    "clinical_effect": {
+      "type": "string",
+      "description": "Description of observed or predicted clinical consequence.",
+      "minLength": 1
+    },
+    "management_guidance": {
+      "type": "string",
+      "description": "Clinical recommendations, dose adjustment, monitoring parameters, or alternative treatments.",
+      "type": "string"
+    },
+    "source_id": {
+      "type": "string",
+      "description": "Stable identifier for the primary source organization or database.",
+      "minLength": 1
+    },
+    "source_record_id": {
+      "type": "string",
+      "description": "Original record or interaction identifier within the originating source.",
+      "minLength": 1
+    },
+    "source_version": {
+      "type": "string",
+      "description": "Release identifier, build number, or publication date of the source.",
+      "minLength": 1
+    },
+    "source_url": {
+      "type": "string",
+      "description": "Direct URL or canonical documentation link for the source record.",
+      "format": "uri"
+    },
+    "retrieved_at": {
+      "type": "string",
+      "description": "ISO 8601 UTC timestamp recording when the record was extracted.",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}(T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(Z|[+-]\\d{2}:\\d{2})?)?$"
+    },
+    "validation_status": {
+      "type": "string",
+      "description": "Current lifecycle validation state of the record.",
+      "enum": [
+        "unvalidated",
+        "technically_validated",
+        "needs_clinical_review",
+        "clinically_approved"
+      ]
+    },
+    "notes": {
+      "type": "string",
+      "description": "Contextual annotations, clinical review rationale, or conflict notes."
+    }
+  },
+  "ordered_columns": [
+    "record_id",
+    "interaction_group_id",
+    "ingredient_a_name",
+    "ingredient_a_id",
+    "ingredient_a_id_system",
+    "ingredient_b_name",
+    "ingredient_b_id",
+    "ingredient_b_id_system",
+    "interaction_type",
+    "severity",
+    "clinical_effect",
+    "management_guidance",
+    "source_id",
+    "source_record_id",
+    "source_version",
+    "source_url",
+    "retrieved_at",
+    "validation_status",
+    "notes"
+  ]
+}

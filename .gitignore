@@ -26,7 +26,32 @@ Thumbs.db
 # =========================================================================
 # Data & Backups
 # =========================================================================
-/data/
+*.sqlite
+*.sqlite3
+*.db
+*.zip
+*.parquet
+**/data/reference/
+**/data/cache/
+**/.cache/
+**/data_cache/
+**/.dataset_cache/
+**/staging/
+
+# Explicit Clinical Dataset Exclusions (Strict Guardrails: Never commit full datasets)
+modawem_ddi.csv
+modawem_allergy.csv
+**/modawem_ddi.csv
+**/modawem_allergy.csv
+
+# Allow data/interactions-allergies for schemas, dictionaries, and source registers
+/data/*
+!/data/interactions-allergies/
+!/data/.gitkeep
+
+/reports/
+/scripts/
+modawem_rxnorm_reference_data.zip
 /infrastructure/backups/*
 !/infrastructure/backups/.gitkeep
 

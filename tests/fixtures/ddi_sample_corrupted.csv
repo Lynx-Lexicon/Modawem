@@ -1,0 +1,3 @@
+record_id,interaction_group_id,ingredient_a_name,ingredient_a_id,ingredient_a_id_system,ingredient_b_name,ingredient_b_id,ingredient_b_id_system,interaction_type,severity,clinical_effect,management_guidance,source_id,source_record_id,source_version,source_url,retrieved_at,validation_status,notes
+SYN-DDI-001,GRP-RxNorm-SYN01-RxNorm-SYN02,SyntheticStatinA,SYN01,RxNorm,SyntheticAzoleB,SYN02,RxNorm,pharmacokinetic,Major,Increased toxicity,Avoid,SYN_SOURCE_1,SR-101,2026.1,https://example.com/syn/101,2026-10-15T00:00:00Z,technically_validated
+SYN-CORRUPT-ROW,"Unclosed quote string without closing quote,SYN02,SYN03

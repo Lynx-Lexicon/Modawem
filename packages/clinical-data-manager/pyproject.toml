@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "modawem-clinical-data"
+version = "0.1.0"
+description = "Modawem clinical interaction and allergy dataset validation, refresh, and version management"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "requests>=2.31",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4",
+]
+
+[project.scripts]
+modawem-dataset = "clinical_data.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["clinical_data*"]

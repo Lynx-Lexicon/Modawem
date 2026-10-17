@@ -1,0 +1,133 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://modawem.internal/schemas/clinical-data/allergy/v1.json",
+  "title": "ModawemDrugAllergenRelationshipRecord",
+  "description": "Schema definition for Modawem drug-allergen cross-reference dataset records.",
+  "version": "1.0.0",
+  "type": "object",
+  "required": [
+    "record_id",
+    "allergen_name",
+    "allergen_class",
+    "ingredient_name",
+    "ingredient_id",
+    "ingredient_id_system",
+    "relationship_type",
+    "evidence_summary",
+    "qualifiers",
+    "source_id",
+    "source_record_id",
+    "source_version",
+    "source_url",
+    "retrieved_at",
+    "validation_status",
+    "notes"
+  ],
+  "properties": {
+    "record_id": {
+      "type": "string",
+      "description": "Unique identifier for this specific allergen relationship record.",
+      "minLength": 1
+    },
+    "allergen_name": {
+      "type": "string",
+      "description": "Name of the allergen, drug, or substance provoking hypersensitivity.",
+      "minLength": 1
+    },
+    "allergen_class": {
+      "type": "string",
+      "description": "Clinical or chemical drug class of the allergen (e.g., Penicillins, Sulfonamides).",
+      "minLength": 1
+    },
+    "ingredient_name": {
+      "type": "string",
+      "description": "Standardized active pharmaceutical ingredient evaluated for relationship/reactivity.",
+      "minLength": 1
+    },
+    "ingredient_id": {
+      "type": "string",
+      "description": "Unique identifier for the ingredient in the given coding system (e.g., RxNorm RxCUI).",
+      "minLength": 1
+    },
+    "ingredient_id_system": {
+      "type": "string",
+      "description": "Coding authority for ingredient identifier (e.g., RxNorm, UNII, CAS, custom).",
+      "minLength": 1
+    },
+    "relationship_type": {
+      "type": "string",
+      "description": "Strict clinical relationship between the allergen/class and target ingredient.",
+      "enum": [
+        "class_membership",
+        "documented_cross_reactivity",
+        "precaution",
+        "uncertain_mapping"
+      ]
+    },
+    "evidence_summary": {
+      "type": "string",
+      "description": "Summary of pharmacological evidence, immunological studies, or official prescribing warnings."
+    },
+    "qualifiers": {
+      "type": "string",
+      "description": "Structural, immunological, or clinical qualifiers (e.g., R1 side-chain similarity, non-arylamine sulfonamide, IgE-mediated)."
+    },
+    "source_id": {
+      "type": "string",
+      "description": "Identifier of the originating source institution or dataset.",
+      "minLength": 1
+    },
+    "source_record_id": {
+      "type": "string",
+      "description": "Identifier of the record within the originating source.",
+      "minLength": 1
+    },
+    "source_version": {
+      "type": "string",
+      "description": "Version, release tag, or publication date of the source.",
+      "minLength": 1
+    },
+    "source_url": {
+      "type": "string",
+      "description": "Direct canonical link to the source material.",
+      "format": "uri"
+    },
+    "retrieved_at": {
+      "type": "string",
+      "description": "ISO 8601 UTC timestamp recording retrieval date.",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}(T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(Z|[+-]\\d{2}:\\d{2})?)?$"
+    },
+    "validation_status": {
+      "type": "string",
+      "description": "Validation lifecycle status.",
+      "enum": [
+        "unvalidated",
+        "technically_validated",
+        "needs_clinical_review",
+        "clinically_approved"
+      ]
+    },
+    "notes": {
+      "type": "string",
+      "description": "Clinical nuances, exclusions, or review flags."
+    }
+  },
+  "ordered_columns": [
+    "record_id",
+    "allergen_name",
+    "allergen_class",
+    "ingredient_name",
+    "ingredient_id",
+    "ingredient_id_system",
+    "relationship_type",
+    "evidence_summary",
+    "qualifiers",
+    "source_id",
+    "source_record_id",
+    "source_version",
+    "source_url",
+    "retrieved_at",
+    "validation_status",
+    "notes"
+  ]
+}

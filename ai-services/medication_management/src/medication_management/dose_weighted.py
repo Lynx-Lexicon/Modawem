@@ -10,7 +10,8 @@ from typing import Dict, Iterable, List, Literal, Optional, Union
 from .models import AdherenceResult
 from .utils import parse_date
 
-UNKNOWN_IN_DENOMINATOR: bool = True
+
+UNKNOWN_IN_DENOMINATOR: bool = False
 DWA_METRIC_NAME: str = "DWA"
 
 Status = Literal["taken", "missed", "unknown"]
@@ -97,16 +98,26 @@ def calculate_dose_weighted_adherence(
 
     # 4. Score
     if doses_required == 0:
-        value = 0.0
-        percentage = 0.0
-        errors.append("No measurable doses; score set to 0.0.")
-    else:
-        value = doses_taken / doses_required
-        percentage = round(value * 100, 2)
+        error_msg = "Cannot Calculate DWA: No Measurable Doses Found."
+        if errors:
+            error_msg += " | Details: " + "; ".join(errors)
+        return AdherenceResult(
+            metric=DWA_METRIC_NAME,
+            is_valid=False,
+            error_message=error_msg
+        )
+
+    value = doses_taken/doses_required
+    percentage = round(value *100,2)
+
+    is_valid = len(errors) == 0
+    error_message = "; ".join(errors) if errors else None
 
     return AdherenceResult(
         metric=DWA_METRIC_NAME,
         value=value,
         percentage=percentage,
         observation_days=days_evaluated,
+        is_valid=is_valid,
+        error_message=error_message
     )

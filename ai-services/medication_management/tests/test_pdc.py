@@ -41,35 +41,39 @@ class TestPDCInvariantsAndEdges(unittest.TestCase):
         self.assertEqual(res["value"], 0.0)
         self.assertEqual(res["percentage"], 0.0)
 
-    def test_invalid_observation_window_raises(self):
-        """start_date after end_date must raise ValueError."""
-        with self.assertRaises(ValueError):
-            calculate_pdc([], "2026-02-01", "2026-01-01")
+    def test_invalid_observation_window_handled_gracefully(self):
+        """start_date after end_date must return is_valid=False."""
+        res = calculate_pdc([], "2026-02-01", "2026-01-01")
+        self.assertFalse(res["is_valid"])
+        self.assertIn("cannot be after", res["error_message"])
 
-    def test_invalid_days_supply_raises(self):
-        """Non-positive days_supply must raise ValueError."""
-        with self.assertRaises(ValueError):
-            calculate_pdc(
-                [{"fill_date": "2026-01-01", "days_supply": 0}],
-                "2026-01-01",
-                "2026-01-31",
-            )
+    def test_invalid_days_supply_handled_gracefully(self):
+        """Non-positive days_supply must return is_valid=False."""
+        res_zero = calculate_pdc(
+            [{"fill_date": "2026-01-01", "days_supply": 0}],
+            "2026-01-01",
+            "2026-01-31",
+        )
+        self.assertFalse(res_zero["is_valid"])
+        self.assertIn("days_supply must be a positive integer", res_zero["error_message"])
 
-        with self.assertRaises(ValueError):
-            calculate_pdc(
-                [{"fill_date": "2026-01-01", "days_supply": -5}],
-                "2026-01-01",
-                "2026-01-31",
-            )
+        res_neg = calculate_pdc(
+            [{"fill_date": "2026-01-01", "days_supply": -5}],
+            "2026-01-01",
+            "2026-01-31",
+        )
+        self.assertFalse(res_neg["is_valid"])
+        self.assertIn("days_supply must be a positive integer", res_neg["error_message"])
 
-    def test_invalid_date_format_raises(self):
-        """Unparseable date string must raise ValueError."""
-        with self.assertRaises(ValueError):
-            calculate_pdc(
-                [{"fill_date": "not-a-date", "days_supply": 30}],
-                "2026-01-01",
-                "2026-01-31",
-            )
+    def test_invalid_date_format_handled_gracefully(self):
+        """Unparseable date string must return is_valid=False."""
+        res = calculate_pdc(
+            [{"fill_date": "not-a-date", "days_supply": 30}],
+            "2026-01-01",
+            "2026-01-31",
+        )
+        self.assertFalse(res["is_valid"])
+        self.assertIn("Invalid date string", res["error_message"])
 
     def test_dual_method_verification_against_naive_daily_set(self):
         """Verifies interval method produces identical results to naive day-set iteration.

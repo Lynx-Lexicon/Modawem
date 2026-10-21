@@ -76,46 +76,54 @@ def calculate_mpr(
         - Fills before start_date or after end_date: Excluded under fill-date rule.
         - Overlapping fills: MPR does not deduplicate days; days are summed directly,
           allowing MPR to accurately reflect total dispensed possession ratio > 100%.
-    """
-    # 1. Validate and compute observation window
-    window_start, window_end, total_obs_days = validate_observation_window(
-        start_date, end_date
-    )
+        """
+    try:
+        # 1. Validate and compute observation window
+        window_start, window_end, total_obs_days = validate_observation_window(
+            start_date, end_date
+        )
 
-    # 2. Normalize and filter fills
-    sorted_fills = normalize_fills(
-        fills, target_drug=target_drug, equivalence_rule=equivalence_rule
-    )
+        # 2. Normalize and filter fills
+        sorted_fills = normalize_fills(
+            fills, target_drug=target_drug, equivalence_rule=equivalence_rule
+        )
 
-    # 3. Sum days' supply dispensed inside observation period (fill-date rule)
-    total_days_supply = 0
-    qualifying_fills_count = 0
+        # 3. Sum days' supply dispensed inside observation period (fill-date rule)
+        total_days_supply = 0
+        qualifying_fills_count = 0
 
-    for fill in sorted_fills:
-        if window_start <= fill.fill_date <= window_end:
-            qualifying_fills_count += 1
-            if truncate_at_end:
-                # Truncate supply extending beyond window_end
-                # Days from fill_date to window_end inclusive
-                days_until_end = (window_end - fill.fill_date).days + 1
-                effective_supply = min(fill.days_supply, days_until_end)
-                total_days_supply += effective_supply
-            else:
-                total_days_supply += fill.days_supply
+        for fill in sorted_fills:
+            if window_start <= fill.fill_date <= window_end:
+                qualifying_fills_count += 1
+                if truncate_at_end:
+                    # Truncate supply extending beyond window_end
+                    # Days from fill_date to window_end inclusive
+                    days_until_end = (window_end - fill.fill_date).days + 1
+                    effective_supply = min(fill.days_supply, days_until_end)
+                    total_days_supply += effective_supply
+                else:
+                    total_days_supply += fill.days_supply
 
-    # 4. Compute metrics without intermediate rounding
-    mpr_value = total_days_supply / total_obs_days if total_obs_days > 0 else 0.0
-    # Note: MPR is NEVER capped at 1.0 / 100%
-    mpr_percentage = round(mpr_value * 100.0, 2)
+        # 4. Compute metrics without intermediate rounding
+        mpr_value = total_days_supply / total_obs_days if total_obs_days > 0 else 0.0
+        # Note: MPR is NEVER capped at 1.0 / 100%
+        mpr_percentage = round(mpr_value * 100.0, 2)
 
-    result = AdherenceResult(
-        metric="MPR",
-        value=mpr_value,
-        percentage=mpr_percentage,
-        observation_days=total_obs_days,
-        total_days_supply=total_days_supply,
-    )
+        result = AdherenceResult(
+            metric="MPR",
+            value=mpr_value,
+            percentage=mpr_percentage,
+            observation_days=total_obs_days,
+            total_days_supply=total_days_supply,
+        )
 
+    except Exception as e:
+        result = AdherenceResult(
+            metric="MPR",
+            is_valid=False,
+            error_message=f"MPR Calculation Error: {str(e)}"
+        )
+    
     if as_dict:
         res_dict = result.to_dict(include_metadata=include_metadata)
         if include_metadata:

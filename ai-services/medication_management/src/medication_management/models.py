@@ -82,14 +82,17 @@ class AdherenceResult:
     """
 
     metric: str
-    value: float
-    percentage: float
-    observation_days: int
+    value: float = 0.0
+    percentage: float = 0.0
+    observation_days: int = 0
     covered_days: Optional[int] = None
     total_days_supply: Optional[int] = None
     gaps_count: Optional[int] = None
     gap_days: Optional[int] = None
     covered_intervals: List[Tuple[str, str]] = field(default_factory=list)
+    #Error handling fields
+    is_valid: bool = True
+    error_message: Optional[str] = None
 
     def to_dict(self, include_metadata: bool = False) -> Dict[str, Any]:
         """Convert result to dictionary matching the required deliverable shape.
@@ -97,7 +100,15 @@ class AdherenceResult:
         Args:
             include_metadata: If True, include detailed gap and interval breakdown.
         """
+        if not self.is_valid:
+            return {
+                "is_valid": False,
+                "error_message": self.error_message,
+                "metric": self.metric
+            }
+        
         base: Dict[str, Any] = {
+            "is_valid":True,
             "value": self.value,
             "percentage": self.percentage,
             "observation_days": self.observation_days,
@@ -142,8 +153,8 @@ class DrugEquivalenceRule:
     def is_equivalent(self, candidate_drug: Optional[str]) -> bool:
         """Check if candidate drug is equivalent to target."""
         if candidate_drug is None:
-            # If no drug specified in fill, treated as target drug
-            return True
+            # A fill with no drug name cannot be assumed to be the target drug.
+            return False
         norm_target = self.target_drug.strip().lower()
         norm_candidate = candidate_drug.strip().lower()
         if norm_candidate == norm_target:

@@ -79,16 +79,20 @@ class TestMPRInvariantsAndEdges(unittest.TestCase):
         self.assertAlmostEqual(trunc_res["value"], 0.3)
 
     def test_mpr_invalid_inputs(self):
-        """Validation errors on bad inputs."""
-        with self.assertRaises(ValueError):
-            calculate_mpr([], "2026-05-01", "2026-04-01")
+        """Validation errors on bad inputs return is_valid=False gracefully."""
+        # Test: Start date after end date
+        res = calculate_mpr([], "2026-05-01", "2026-04-01")
+        self.assertFalse(res["is_valid"])
+        self.assertIn("cannot be after", res["error_message"])
 
-        with self.assertRaises(ValueError):
-            calculate_mpr(
-                [{"fill_date": "2026-01-01", "days_supply": -10}],
-                "2026-01-01",
-                "2026-01-31",
-            )
+        # Test: Negative days supply
+        res = calculate_mpr(
+            [{"fill_date": "2026-01-01", "days_supply": -10}],
+            "2026-01-01",
+            "2026-01-31",
+        )
+        self.assertFalse(res["is_valid"])
+        self.assertIn("days_supply must be a positive integer", res["error_message"])
 
 
 if __name__ == "__main__":

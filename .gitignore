@@ -26,7 +26,17 @@ Thumbs.db
 # =========================================================================
 # Data & Backups
 # =========================================================================
+*.sqlite
+*.sqlite3
+*.db
+*.zip
+*.parquet
+**/data/reference/
+**/data/cache/
 /data/
+/reports/
+/scripts/
+modawem_rxnorm_reference_data.zip
 /infrastructure/backups/*
 !/infrastructure/backups/.gitkeep
 

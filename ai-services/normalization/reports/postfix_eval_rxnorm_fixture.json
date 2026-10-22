@@ -1,0 +1,49 @@
+{
+  "dataset": "rxnorm_fixture.csv",
+  "total_cases": 209,
+  "true_positives": 206,
+  "false_positives": 0,
+  "false_negatives": 3,
+  "true_negatives": 0,
+  "unresolved_count": 3,
+  "api_errors": 0,
+  "precision": 1.0,
+  "recall": 0.9856,
+  "f1_score": 0.9927,
+  "accuracy": 0.9856,
+  "false_positive_rate": 0.0,
+  "category_metrics": {
+    "correct": {
+      "total": 105,
+      "tp": 105,
+      "fp": 0,
+      "fn": 0,
+      "tn": 0,
+      "unresolved": 0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "accuracy": 1.0
+    },
+    "misspelled": {
+      "total": 104,
+      "tp": 101,
+      "fp": 0,
+      "fn": 3,
+      "tn": 0,
+      "unresolved": 3,
+      "precision": 1.0,
+      "recall": 0.9712,
+      "f1": 0.9854,
+      "accuracy": 0.9712
+    }
+  },
+  "error_bucket_distribution": {
+    "None": 206,
+    "False Negative": 3
+  },
+  "failure_stage_distribution": {
+    "None": 206,
+    "accept": 3
+  }
+}

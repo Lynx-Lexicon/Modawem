@@ -81,64 +81,72 @@ def calculate_pdc(
           extend past end_date and are truncated (excluded).
         - Fill after end_date: Completely excluded from PDC.
     """
-    # 1. Validate and compute observation window
-    window_start, window_end, total_obs_days = validate_observation_window(
-        start_date, end_date
-    )
+    try:
+        # 1. Validate and compute observation window
+        window_start, window_end, total_obs_days = validate_observation_window(
+            start_date, end_date
+        )
 
-    # 2. Normalize and filter fills
-    sorted_fills = normalize_fills(
-        fills, target_drug=target_drug, equivalence_rule=equivalence_rule
-    )
+        # 2. Normalize and filter fills
+        sorted_fills = normalize_fills(
+            fills, target_drug=target_drug, equivalence_rule=equivalence_rule
+        )
 
-    # Filter out fills occurring after window_end (they can never cover days in window)
-    relevant_fills = [f for f in sorted_fills if f.fill_date <= window_end]
+        # Filter out fills occurring after window_end (they can never cover days in window)
+        relevant_fills = [f for f in sorted_fills if f.fill_date <= window_end]
 
-    if not include_prior_fills:
-        relevant_fills = [f for f in relevant_fills if f.fill_date >= window_start]
+        if not include_prior_fills:
+            relevant_fills = [f for f in relevant_fills if f.fill_date >= window_start]
 
-    # 3. Calculate stockpiled intervals (Interval-based O(N))
-    all_intervals = calculate_stockpiled_intervals(relevant_fills)
+        # 3. Calculate stockpiled intervals (Interval-based O(N))
+        all_intervals = calculate_stockpiled_intervals(relevant_fills)
 
-    # 4. Clip intervals strictly to [window_start, window_end]
-    clipped_intervals = clip_intervals_to_window(
-        all_intervals, window_start, window_end
-    )
+        # 4. Clip intervals strictly to [window_start, window_end]
+        clipped_intervals = clip_intervals_to_window(
+            all_intervals, window_start, window_end
+        )
 
-    # 5. Calculate covered days
-    covered_days = 0
-    for s, e in clipped_intervals:
-        covered_days += (e - s).days + 1
+        # 5. Calculate covered days
+        covered_days = 0
+        for s, e in clipped_intervals:
+            covered_days += (e - s).days + 1
 
-    # Safety check: PDC cannot exceed total observation days
-    if covered_days > total_obs_days:
-        covered_days = total_obs_days
+        # Safety check: PDC cannot exceed total observation days
+        if covered_days > total_obs_days:
+            covered_days = total_obs_days
 
-    # 6. Compute metrics (no intermediate rounding)
-    pdc_value = covered_days / total_obs_days if total_obs_days > 0 else 0.0
-    # PDC is strictly bounded between 0.0 and 1.0
-    pdc_value = min(1.0, max(0.0, pdc_value))
-    pdc_percentage = round(pdc_value * 100.0, 2)
+        # 6. Compute metrics (no intermediate rounding)
+        pdc_value = covered_days / total_obs_days if total_obs_days > 0 else 0.0
+        # PDC is strictly bounded between 0.0 and 1.0
+        pdc_value = min(1.0, max(0.0, pdc_value))
+        pdc_percentage = round(pdc_value * 100.0, 2)
 
-    # 7. Calculate gap information
-    gap_intervals = extract_gaps_from_intervals(
-        clipped_intervals, window_start, window_end
-    )
-    gap_days = total_obs_days - covered_days
-    gaps_count = len(gap_intervals) if gap_days > 0 else 0
+        # 7. Calculate gap information
+        gap_intervals = extract_gaps_from_intervals(
+            clipped_intervals, window_start, window_end
+        )
+        gap_days = total_obs_days - covered_days
+        gaps_count = len(gap_intervals) if gap_days > 0 else 0
 
-    result = AdherenceResult(
-        metric="PDC",
-        value=pdc_value,
-        percentage=pdc_percentage,
-        observation_days=total_obs_days,
-        covered_days=covered_days,
-        gaps_count=gaps_count,
-        gap_days=gap_days,
-        covered_intervals=[
-            (s.isoformat(), e.isoformat()) for s, e in clipped_intervals
-        ],
-    )
+        result = AdherenceResult(
+            metric="PDC",
+            value=pdc_value,
+            percentage=pdc_percentage,
+            observation_days=total_obs_days,
+            covered_days=covered_days,
+            gaps_count=gaps_count,
+            gap_days=gap_days,
+            covered_intervals=[
+                (s.isoformat(), e.isoformat()) for s, e in clipped_intervals
+            ],
+        )
+
+    except Exception as e:
+        result = AdherenceResult(
+            metric="PDC",
+            is_valid=False,
+            error_message=f"PDC Calculation Error: {str(e)}"
+        )
 
     if as_dict:
         return result.to_dict(include_metadata=include_metadata)

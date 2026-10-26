@@ -1,4 +1,4 @@
-"""Automated test runner and verification suite for Modawem Task 2.
+"""Automated test runner and verification suite for Modawem
 
 Can be run with a single command:
     python run_tests.py

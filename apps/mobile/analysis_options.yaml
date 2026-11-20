@@ -31,8 +31,17 @@ linter:
   # `// ignore_for_file: name_of_lint` syntax on the line or in the file
   # producing the lint.
   rules:
-    # avoid_print: false  # Uncomment to disable the `avoid_print` rule
-    # prefer_single_quotes: true  # Uncomment to enable the `prefer_single_quotes` rule
+    # Prefer const constructors for widgets and objects
+    prefer_const_constructors: true
+
+    # Prefer const over final when the value is compile-time constant
+    prefer_const_declarations: true
+
+    # Prefer const collections passed to immutable constructors
+    prefer_const_literals_to_create_immutables: true
+
+    # Prefer const constructors in immutable classes
+    prefer_const_constructors_in_immutables: true
 
 # Additional information about this file can be found at
 # https://dart.dev/guides/language/analysis-options

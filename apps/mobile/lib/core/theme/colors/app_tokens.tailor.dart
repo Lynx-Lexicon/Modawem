@@ -12,6 +12,7 @@ part of 'app_tokens.dart';
 mixin _$AppTokensTailorMixin on ThemeExtension<AppTokens> {
   Color get surfacePrimary;
   Color get surfacePrimaryStrong;
+  Color get surfaceSecondary;
   Color get surfaceWhite;
   Color get surfaceNeutral;
   Color get surfaceDisabled;
@@ -36,6 +37,7 @@ mixin _$AppTokensTailorMixin on ThemeExtension<AppTokens> {
   AppTokens copyWith({
     Color? surfacePrimary,
     Color? surfacePrimaryStrong,
+    Color? surfaceSecondary,
     Color? surfaceWhite,
     Color? surfaceNeutral,
     Color? surfaceDisabled,
@@ -59,6 +61,7 @@ mixin _$AppTokensTailorMixin on ThemeExtension<AppTokens> {
     return AppTokens(
       surfacePrimary: surfacePrimary ?? this.surfacePrimary,
       surfacePrimaryStrong: surfacePrimaryStrong ?? this.surfacePrimaryStrong,
+      surfaceSecondary: surfaceSecondary ?? this.surfaceSecondary,
       surfaceWhite: surfaceWhite ?? this.surfaceWhite,
       surfaceNeutral: surfaceNeutral ?? this.surfaceNeutral,
       surfaceDisabled: surfaceDisabled ?? this.surfaceDisabled,
@@ -91,6 +94,11 @@ mixin _$AppTokensTailorMixin on ThemeExtension<AppTokens> {
       surfacePrimaryStrong: Color.lerp(
         surfacePrimaryStrong,
         other.surfacePrimaryStrong,
+        t,
+      )!,
+      surfaceSecondary: Color.lerp(
+        surfaceSecondary,
+        other.surfaceSecondary,
         t,
       )!,
       surfaceWhite: Color.lerp(surfaceWhite, other.surfaceWhite, t)!,
@@ -155,6 +163,10 @@ mixin _$AppTokensTailorMixin on ThemeExtension<AppTokens> {
             const DeepCollectionEquality().equals(
               surfacePrimaryStrong,
               other.surfacePrimaryStrong,
+            ) &&
+            const DeepCollectionEquality().equals(
+              surfaceSecondary,
+              other.surfaceSecondary,
             ) &&
             const DeepCollectionEquality().equals(
               surfaceWhite,
@@ -237,6 +249,7 @@ mixin _$AppTokensTailorMixin on ThemeExtension<AppTokens> {
       runtimeType.hashCode,
       const DeepCollectionEquality().hash(surfacePrimary),
       const DeepCollectionEquality().hash(surfacePrimaryStrong),
+      const DeepCollectionEquality().hash(surfaceSecondary),
       const DeepCollectionEquality().hash(surfaceWhite),
       const DeepCollectionEquality().hash(surfaceNeutral),
       const DeepCollectionEquality().hash(surfaceDisabled),

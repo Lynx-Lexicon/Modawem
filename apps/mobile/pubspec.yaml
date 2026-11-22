@@ -39,7 +39,9 @@ dependencies:
   flutter_localizations:
     sdk: flutter
   intl: ^0.20.3
-
+  go_router: ^18.1.4
+  go_router_builder: ^4.5.3
+  flutter_riverpod: ^3.5.0
 dev_dependencies:
   flutter_test:
     sdk: flutter

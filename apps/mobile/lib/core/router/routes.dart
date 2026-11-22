@@ -2,6 +2,8 @@ import 'package:material_ui/material_ui.dart';
 
 import 'package:go_router/go_router.dart';
 
+import 'package:modawem_app/features/auth/login_screen.dart';
+import 'package:modawem_app/features/auth/signup_screen.dart';
 import 'package:modawem_app/features/history/history_screen.dart';
 import 'package:modawem_app/features/home/home_screen.dart';
 import 'package:modawem_app/features/insights/insights_screen.dart';
@@ -10,6 +12,10 @@ import 'package:modawem_app/features/profile/profile_screen.dart';
 import 'package:modawem_app/shared/shells/app_navbar_shell.dart';
 
 part 'routes.g.dart';
+
+part 'routes/login_route.dart';
+part 'routes/signup_route.dart';
+
 part 'branches/home_branch.dart';
 part 'branches/medications_branch.dart';
 part 'branches/insights_branch.dart';

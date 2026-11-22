@@ -10,6 +10,7 @@ class AppTokens extends ThemeExtension<AppTokens> with _$AppTokensTailorMixin {
     required this.surfacePrimary,
     required this.surfacePrimaryStrong,
     required this.surfaceSecondary,
+    required this.surfaceSecondaryStrong,
     required this.surfaceWhite,
     required this.surfaceNeutral,
     required this.surfaceDisabled,
@@ -40,6 +41,8 @@ class AppTokens extends ThemeExtension<AppTokens> with _$AppTokensTailorMixin {
   final Color surfacePrimaryStrong;
   @override
   final Color surfaceSecondary;
+  @override
+  final Color surfaceSecondaryStrong;
   @override
   final Color surfaceWhite;
   @override
@@ -87,8 +90,9 @@ class AppTokens extends ThemeExtension<AppTokens> with _$AppTokensTailorMixin {
     // Surface
     surfacePrimary: AppPrimitives.gold800,
     surfacePrimaryStrong: AppPrimitives.gold500,
-    surfaceWhite: AppPrimitives.gold950,
     surfaceSecondary: AppPrimitives.teal500,
+    surfaceSecondaryStrong: AppPrimitives.teal200,
+    surfaceWhite: AppPrimitives.gold950,
     surfaceNeutral: AppPrimitives.gray900,
     surfaceDisabled: AppPrimitives.gray900,
     surfaceDanger: AppPrimitives.red600,

@@ -104,6 +104,12 @@ abstract class AppLocalizations {
   /// **'مداوم'**
   String get appTitle;
 
+  /// No description provided for @titleLogin.
+  ///
+  /// In ar, this message translates to:
+  /// **'تسجيل الدخول'**
+  String get titleLogin;
+
   /// No description provided for @navBarHome.
   ///
   /// In ar, this message translates to:

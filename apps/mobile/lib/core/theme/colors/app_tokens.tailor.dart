@@ -13,6 +13,7 @@ mixin _$AppTokensTailorMixin on ThemeExtension<AppTokens> {
   Color get surfacePrimary;
   Color get surfacePrimaryStrong;
   Color get surfaceSecondary;
+  Color get surfaceSecondaryStrong;
   Color get surfaceWhite;
   Color get surfaceNeutral;
   Color get surfaceDisabled;
@@ -38,6 +39,7 @@ mixin _$AppTokensTailorMixin on ThemeExtension<AppTokens> {
     Color? surfacePrimary,
     Color? surfacePrimaryStrong,
     Color? surfaceSecondary,
+    Color? surfaceSecondaryStrong,
     Color? surfaceWhite,
     Color? surfaceNeutral,
     Color? surfaceDisabled,
@@ -62,6 +64,8 @@ mixin _$AppTokensTailorMixin on ThemeExtension<AppTokens> {
       surfacePrimary: surfacePrimary ?? this.surfacePrimary,
       surfacePrimaryStrong: surfacePrimaryStrong ?? this.surfacePrimaryStrong,
       surfaceSecondary: surfaceSecondary ?? this.surfaceSecondary,
+      surfaceSecondaryStrong:
+          surfaceSecondaryStrong ?? this.surfaceSecondaryStrong,
       surfaceWhite: surfaceWhite ?? this.surfaceWhite,
       surfaceNeutral: surfaceNeutral ?? this.surfaceNeutral,
       surfaceDisabled: surfaceDisabled ?? this.surfaceDisabled,
@@ -99,6 +103,11 @@ mixin _$AppTokensTailorMixin on ThemeExtension<AppTokens> {
       surfaceSecondary: Color.lerp(
         surfaceSecondary,
         other.surfaceSecondary,
+        t,
+      )!,
+      surfaceSecondaryStrong: Color.lerp(
+        surfaceSecondaryStrong,
+        other.surfaceSecondaryStrong,
         t,
       )!,
       surfaceWhite: Color.lerp(surfaceWhite, other.surfaceWhite, t)!,
@@ -167,6 +176,10 @@ mixin _$AppTokensTailorMixin on ThemeExtension<AppTokens> {
             const DeepCollectionEquality().equals(
               surfaceSecondary,
               other.surfaceSecondary,
+            ) &&
+            const DeepCollectionEquality().equals(
+              surfaceSecondaryStrong,
+              other.surfaceSecondaryStrong,
             ) &&
             const DeepCollectionEquality().equals(
               surfaceWhite,
@@ -250,6 +263,7 @@ mixin _$AppTokensTailorMixin on ThemeExtension<AppTokens> {
       const DeepCollectionEquality().hash(surfacePrimary),
       const DeepCollectionEquality().hash(surfacePrimaryStrong),
       const DeepCollectionEquality().hash(surfaceSecondary),
+      const DeepCollectionEquality().hash(surfaceSecondaryStrong),
       const DeepCollectionEquality().hash(surfaceWhite),
       const DeepCollectionEquality().hash(surfaceNeutral),
       const DeepCollectionEquality().hash(surfaceDisabled),

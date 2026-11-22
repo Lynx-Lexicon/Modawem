@@ -13,6 +13,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get appTitle => 'مداوم';
 
   @override
+  String get titleLogin => 'تسجيل الدخول';
+
+  @override
   String get navBarHome => 'اليوم';
 
   @override

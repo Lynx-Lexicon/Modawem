@@ -3,6 +3,8 @@
   
   "appTitle": "Modawem",
 
+  "titleLogin": "Log In",
+
   "navBarHome": "Overview",
   "navBarMedications": "Medications",
   "navBarInsights": "Insights",

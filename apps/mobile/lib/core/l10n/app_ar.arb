@@ -2,6 +2,8 @@
   "@@locale": "ar",
 
   "appTitle": "مداوم",
+
+  "titleLogin": "تسجيل الدخول",
   
   "navBarHome": "اليوم",
   "navBarMedications": "الأدوية",

@@ -2,14 +2,29 @@ import 'package:material_ui/material_ui.dart';
 
 import 'package:modawem_app/core/theme/colors/app_tokens.dart';
 
-abstract final class AppTheme {
-  static final ThemeData light = _buildTheme(Brightness.light, AppTokens.light);
-  static final ThemeData dark = _buildTheme(Brightness.light, AppTokens.light);
+enum ThemeType {
+  light,
+  // dark
+}
 
-  static ThemeData _buildTheme(Brightness brightness, AppTokens tokens) {
+abstract final class AppTheme {
+  static ThemeData light(Locale locale) =>
+      _buildTheme(Brightness.light, AppTokens.light, locale);
+
+  // TODO: Implement Dark Mode Functionality
+  // static ThemeData dark() => _buildTheme(Brightness.light, AppTokens.light);
+
+  static ThemeData _buildTheme(
+    Brightness brightness,
+    AppTokens tokens,
+    Locale locale,
+  ) {
+    final bool isArabic = locale.languageCode == "ar";
+
     final ThemeData base = ThemeData(
       useMaterial3: true,
       brightness: brightness,
+      fontFamily: isArabic ? 'Beiruti' : null,
       colorScheme: ColorScheme.fromSeed(
         brightness: brightness,
         seedColor: tokens.surfacePrimary,

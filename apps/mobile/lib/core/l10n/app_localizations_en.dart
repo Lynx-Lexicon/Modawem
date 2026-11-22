@@ -13,6 +13,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get appTitle => 'Modawem';
 
   @override
+  String get titleLogin => 'Log In';
+
+  @override
   String get navBarHome => 'Overview';
 
   @override

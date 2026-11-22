@@ -1,0 +1,11 @@
+{
+  "@@locale": "en",
+  
+  "appTitle": "Modawem",
+
+  "navBarHome": "Overview",
+  "navBarMedications": "Medications",
+  "navBarInsights": "Insights",
+  "navBarHistory": "History",
+  "navBarProfile": "Profile"
+}

@@ -1,19 +1,35 @@
 import 'package:material_ui/material_ui.dart';
 
+import 'package:modawem_app/core/l10n/app_localizations.dart';
+import 'package:modawem_app/core/l10n/app_localizations_extension.dart';
 import 'package:modawem_app/core/theme/app_theme.dart';
 
-class ModawemApp extends StatelessWidget {
+class ModawemApp extends StatefulWidget {
   const ModawemApp({super.key});
+
+  @override
+  State<ModawemApp> createState() => _ModawemAppState();
+}
+
+class _ModawemAppState extends State<ModawemApp> {
+  // TODO: Implement local switching functionality
+  Locale locale = const Locale("en");
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Modawem',
+      onGenerateTitle: (context) => context.l10n.appTitle,
+
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
 
       // TODO: Implement theme switch functionality
       themeMode: ThemeMode.light,
+
+      supportedLocales: const [Locale('ar'), Locale('en')],
+      locale: locale,
+      localizationsDelegates: const [AppLocalizations.delegate],
+
       home: const MainNavigationScreen(),
     );
   }
@@ -48,7 +64,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: const Color.fromARGB(255, 35, 200, 222),
-        title: const Text('Modawem'),
+        title: Text(context.l10n.appTitle),
       ),
       body: _screens[_currentIndex],
       bottomNavigationBar: NavigationBar(
@@ -58,31 +74,31 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
             _currentIndex = index;
           });
         },
-        destinations: const [
+        destinations: [
           NavigationDestination(
-            icon: Icon(Icons.today_outlined),
-            selectedIcon: Icon(Icons.today),
-            label: 'اليوم',
+            icon: const Icon(Icons.today_outlined),
+            selectedIcon: const Icon(Icons.today),
+            label: context.l10n.navBarHome,
           ),
           NavigationDestination(
-            icon: Icon(Icons.medication_outlined),
-            selectedIcon: Icon(Icons.medication),
-            label: 'الأدوية',
+            icon: const Icon(Icons.medication_outlined),
+            selectedIcon: const Icon(Icons.medication),
+            label: context.l10n.navBarMedications,
           ),
           NavigationDestination(
-            icon: Icon(Icons.insights_outlined),
-            selectedIcon: Icon(Icons.insights),
-            label: 'الإحصائيات',
+            icon: const Icon(Icons.insights_outlined),
+            selectedIcon: const Icon(Icons.insights),
+            label: context.l10n.navBarInsights,
           ),
           NavigationDestination(
-            icon: Icon(Icons.history_outlined),
-            selectedIcon: Icon(Icons.history),
-            label: 'السجل',
+            icon: const Icon(Icons.history_outlined),
+            selectedIcon: const Icon(Icons.history),
+            label: context.l10n.navBarHistory,
           ),
           NavigationDestination(
-            icon: Icon(Icons.person_outline),
-            selectedIcon: Icon(Icons.person),
-            label: 'الملف',
+            icon: const Icon(Icons.person_outline),
+            selectedIcon: const Icon(Icons.person),
+            label: context.l10n.navBarProfile,
           ),
         ],
       ),

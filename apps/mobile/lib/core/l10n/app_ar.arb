@@ -1,0 +1,11 @@
+{
+  "@@locale": "ar",
+
+  "appTitle": "مداوم",
+  
+  "navBarHome": "اليوم",
+  "navBarMedications": "الأدوية",
+  "navBarInsights": "الإحصائيات",
+  "navBarHistory": "السجلات",
+  "navBarProfile": "حسابي"
+}

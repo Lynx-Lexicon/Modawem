@@ -2,8 +2,8 @@ import 'package:material_ui/material_ui.dart';
 
 import 'package:go_router/go_router.dart';
 
-import 'package:modawem_app/features/auth/login_screen.dart';
-import 'package:modawem_app/features/auth/signup_screen.dart';
+import 'package:modawem_app/features/auth/widgets/login_screen.dart';
+import 'package:modawem_app/features/auth/widgets/signup_screen.dart';
 import 'package:modawem_app/features/history/history_screen.dart';
 import 'package:modawem_app/features/home/home_screen.dart';
 import 'package:modawem_app/features/insights/insights_screen.dart';

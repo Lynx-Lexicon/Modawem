@@ -1,15 +1,25 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:modawem_app/core/l10n/app_localizations_extension.dart';
+import 'package:modawem_app/features/auth/auth_controller.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
       appBar: AppBar(title: Text(context.l10n.navBarHome)),
 
-      body: Center(child: Text(context.l10n.navBarHome)),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(context.l10n.navBarHome),
+            Text("Hello ${ref.read(authControllerProvider).value!.firstName}"),
+          ],
+        ),
+      ),
     );
   }
 }
